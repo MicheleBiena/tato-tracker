@@ -1,0 +1,11 @@
+{
+  "name": "tato-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Planner di studio locale e rilassante, pronto per GitHub Pages.",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node --check planner.js && node --check app.js && npm test",
+    "test:browser": "node --preserve-symlinks-main tests/browser-smoke.mjs"
+  }
+}
