@@ -55,7 +55,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, timer }));
       return true;
     } catch (_) {
-      elements.status.textContent = 'Il timer continua, ma non riesco a salvarlo sul dispositivo.';
+      elements.status.textContent = 'Salvataggio locale non riuscito. Il timer continua a funzionare.';
       return false;
     }
   }
@@ -81,27 +81,23 @@
   }
 
   function statusText() {
-    if (timer.phase === 'complete') return 'Ciclo completato. Le radici sono forti e il germoglio \u00e8 spuntato.';
+    if (timer.phase === 'complete') return 'Ciclo completato.';
     if (timer.phase === 'focus') {
-      if (timer.running) return 'Concentrati su una cosa sola. Tato tiene il tempo per te.';
-      if (timer.remainingSeconds < timer.totalSeconds) return 'Timer in pausa. Riprendi quando sei pronto.';
-      return 'Quando vuoi, avvia questa sessione di concentrazione.';
+      if (timer.running) return 'Sessione in corso.';
+      if (timer.remainingSeconds < timer.totalSeconds) return 'Timer in pausa.';
+      return 'Timer pronto.';
     }
     if (timer.running) {
       return timer.phase === 'longBreak'
-        ? 'Pausa lunga: allontanati dallo schermo e recupera energie.'
-        : 'Pausa breve: respira, muoviti un po\u2019 e lascia riposare gli occhi.';
+        ? 'Pausa lunga in corso.'
+        : 'Pausa breve in corso.';
     }
-    return 'La pausa \u00e8 pronta. Avviala quando vuoi.';
+    return 'Pausa pronta.';
   }
 
   function plantCaption(progress) {
-    if (timer.phase === 'complete') return 'Tato \u00e8 spuntato: ciclo completato.';
-    if (progress.overall <= 0) return 'Le prime radici aspettano di crescere.';
-    if (progress.overall < 0.26) return 'Le radici cercano spazio nella terra.';
-    if (progress.overall < 0.68) return 'Sotto terra stanno crescendo nuove patate.';
-    if (progress.sprout < 0.5) return 'Il germoglio si prepara a spuntare.';
-    return 'La pianta sta emergendo dalla terra.';
+    if (timer.phase === 'complete') return 'Tato \u00e8 spuntato.';
+    return `Crescita radici: ${Math.round(progress.root * 100)}% \u00b7 germoglio: ${Math.round(progress.sprout * 100)}%`;
   }
 
   function renderSessionSteps() {
@@ -132,7 +128,7 @@
       <li><span>${config.sessions}\u00d7</span><p><strong>Sessioni di concentrazione</strong>${config.focusMinutes} min ciascuna</p></li>
       <li><span>${shortBreaks}</span><p><strong>Pause brevi</strong>${config.shortBreakMinutes} min ciascuna</p></li>
       <li><span>${longBreaks}</span><p><strong>Pause lunghe</strong>${longBreakText}</p></li>
-      <li><span>\u2248</span><p><strong>Durata complessiva</strong>Circa ${totalMinutes} min</p></li>`;
+      <li><span>\u03a3</span><p><strong>Durata totale</strong>${totalMinutes} min</p></li>`;
   }
 
   function renderSettings() {
@@ -335,7 +331,7 @@
     saveTimer();
     renderTimer(true);
     updateTicking();
-    announce('Ciclo Pomodoro riportato alla prima sessione.');
+    announce('Ciclo Pomodoro reimpostato alla sessione 1.');
   });
 
   elements.longBreakEnabled.addEventListener('change', updateLongBreakFields);
@@ -348,7 +344,7 @@
     renderSettings();
     renderTimer(true);
     updateTicking();
-    announce('Nuove impostazioni applicate. Il ciclo riparte dalla prima sessione.');
+    announce('Impostazioni applicate. Ciclo reimpostato alla sessione 1.');
   });
 
   document.addEventListener('click', (event) => {

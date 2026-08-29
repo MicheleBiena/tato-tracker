@@ -536,9 +536,17 @@ async function main() {
       title: document.title,
       rootPaths: document.querySelectorAll('#potato-plant .potato-root').length,
       sprout: Boolean(document.querySelector('#potato-plant .potato-sprout')),
+      branches: document.querySelectorAll('#potato-plant .potato-branch').length,
+      sproutAboveSoil: Boolean(
+        document.querySelector('#potato-plant .soil-surface').compareDocumentPosition(
+          document.querySelector('#potato-plant .potato-sprout')
+        ) & Node.DOCUMENT_POSITION_FOLLOWING
+      ),
       sessions: document.querySelector('#pomodoro-sessions').value,
       focus: document.querySelector('#pomodoro-focus').value,
       shortBreak: document.querySelector('#pomodoro-break').value,
+      status: document.querySelector('#timer-status').textContent.trim(),
+      plantCaption: document.querySelector('#plant-caption').textContent.trim(),
       longBreakEnabled: document.querySelector('#long-break-enabled').checked,
       activeNav: document.querySelector('.mobile-nav a[href="#pomodoro-view"]').getAttribute('aria-current'),
       stepCount: document.querySelectorAll('#session-steps li').length,
@@ -557,10 +565,14 @@ async function main() {
     assert.match(pomodoroInitial.title, /25:00.*Concentrazione.*Tato Tracker/);
     assert.equal(pomodoroInitial.rootPaths, 5, 'L\'illustrazione SVG non contiene le radici previste.');
     assert.equal(pomodoroInitial.sprout, true, 'L\'illustrazione SVG non contiene il germoglio.');
+    assert.equal(pomodoroInitial.branches, 5, 'Le foglie SVG non sono collegate al gambo.');
+    assert.equal(pomodoroInitial.sproutAboveSoil, true, 'Il gambo SVG non emerge davanti al terreno.');
     assert.deepEqual(
       [pomodoroInitial.sessions, pomodoroInitial.focus, pomodoroInitial.shortBreak],
       ['4', '25', '5']
     );
+    assert.equal(pomodoroInitial.status, 'Timer pronto.');
+    assert.equal(pomodoroInitial.plantCaption, 'Crescita radici: 0% \u00b7 germoglio: 0%');
     assert.equal(pomodoroInitial.longBreakEnabled, true);
     assert.equal(pomodoroInitial.activeNav, 'page');
     assert.equal(pomodoroInitial.stepCount, 4);

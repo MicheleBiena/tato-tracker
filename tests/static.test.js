@@ -8,6 +8,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const potatoSvg = fs.readFileSync(path.join(root, 'potato-plant.svg'), 'utf8');
+const pomodoroScript = fs.readFileSync(path.join(root, 'pomodoro.js'), 'utf8');
 
 test('document includes the core accessibility landmarks', () => {
   assert.match(html, /<html\s+lang="it"/i);
@@ -55,7 +56,33 @@ test('Pomodoro view exposes timer controls, labelled settings and an SVG plant',
   assert.match(html, /for="pomodoro-break"/);
   assert.match(html, /class="potato-root"/);
   assert.match(html, /class="potato-sprout"/);
+  assert.match(html, /class="potato-stem"/);
+  assert.equal((html.match(/class="potato-branch"/g) || []).length, 5);
+  assert.ok(
+    html.indexOf('class="soil-surface"') < html.indexOf('class="potato-sprout"'),
+    'Il germoglio deve essere disegnato davanti alla superficie del terreno.'
+  );
   assert.ok(fs.existsSync(path.join(root, 'potato-plant.svg')));
   assert.match(potatoSvg, /<svg[^>]+viewBox="0 0 520 420"/);
   assert.match(potatoSvg, /aria-labelledby="title description"/);
+});
+
+test('Pomodoro copy is technical and keeps the requested completion phrase', () => {
+  const removedCopy = [
+    'Il tuo ritmo',
+    'Una pausa rigenerante',
+    'Prossimi passi',
+    'Quando vuoi',
+    'Concentrati su una cosa sola',
+    'recupera energie',
+    'lascia riposare gli occhi',
+    'aspettano di crescere',
+    'cercano spazio nella terra',
+    'stanno crescendo nuove patate',
+    'si prepara a spuntare',
+    'sta emergendo dalla terra'
+  ];
+  const pomodoroCopy = `${html.slice(html.indexOf('id="pomodoro-view"'), html.indexOf('<footer'))}\n${pomodoroScript}`;
+  removedCopy.forEach((phrase) => assert.doesNotMatch(pomodoroCopy, new RegExp(phrase, 'i')));
+  assert.match(pomodoroScript, /Tato \\u00e8 spuntato\./);
 });
