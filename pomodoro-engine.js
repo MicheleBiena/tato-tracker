@@ -53,6 +53,7 @@
       session: 1,
       completedSessions: 0,
       remainingSeconds: totalSeconds,
+      remainingMilliseconds: totalSeconds * 1000,
       totalSeconds,
       running: false,
       endsAt: null
@@ -70,6 +71,7 @@
         session: config.sessions,
         completedSessions: config.sessions,
         remainingSeconds: 0,
+        remainingMilliseconds: 0,
         totalSeconds: 0,
         running: false,
         endsAt: null
@@ -83,14 +85,20 @@
       ? Math.min(config.sessions, completedSessions + 1)
       : Math.max(1, completedSessions);
     const session = clampInteger(source.session, 1, config.sessions, expectedSession);
-    const remainingSeconds = clampInteger(source.remainingSeconds, 0, totalSeconds, totalSeconds);
+    const legacyRemainingSeconds = clampInteger(source.remainingSeconds, 0, totalSeconds, totalSeconds);
+    const storedRemainingMilliseconds = Number(source.remainingMilliseconds);
+    const remainingMilliseconds = source.remainingMilliseconds != null
+      && Number.isFinite(storedRemainingMilliseconds)
+      ? Math.min(totalSeconds * 1000, Math.max(0, Math.trunc(storedRemainingMilliseconds)))
+      : legacyRemainingSeconds * 1000;
+    const remainingSeconds = Math.ceil(remainingMilliseconds / 1000);
     const running = source.running === true;
     const fallbackNow = Number.isFinite(now) ? now : Date.now();
     const storedEndsAt = Number(source.endsAt);
     const endsAt = running
       ? Number.isFinite(storedEndsAt) && storedEndsAt > 0
         ? storedEndsAt
-        : fallbackNow + remainingSeconds * 1000
+        : fallbackNow + remainingMilliseconds
       : null;
 
     return {
@@ -99,6 +107,7 @@
       session,
       completedSessions,
       remainingSeconds,
+      remainingMilliseconds,
       totalSeconds,
       running,
       endsAt
@@ -138,6 +147,7 @@
       session,
       completedSessions,
       remainingSeconds: totalSeconds,
+      remainingMilliseconds: totalSeconds * 1000,
       totalSeconds,
       running: keepRunning,
       endsAt: keepRunning ? at + totalSeconds * 1000 : null
@@ -157,27 +167,40 @@
     }
 
     if (timer.phase === 'complete') return timer;
+    const remainingMilliseconds = Math.max(0, Math.min(
+      timer.totalSeconds * 1000,
+      timer.endsAt - currentTime
+    ));
     return {
       ...timer,
-      remainingSeconds: Math.max(0, Math.min(
-        timer.totalSeconds,
-        Math.ceil((timer.endsAt - currentTime) / 1000)
-      ))
+      remainingSeconds: Math.ceil(remainingMilliseconds / 1000),
+      remainingMilliseconds
     };
+  }
+
+  function millisecondsUntilNextTick(candidate, now) {
+    const currentTime = Number.isFinite(now) ? now : Date.now();
+    const timer = normalizeTimer(candidate, currentTime);
+    if (!timer.running || timer.phase === 'complete') return null;
+    const remainingMilliseconds = Math.max(0, timer.endsAt - currentTime);
+    if (remainingMilliseconds === 0) return 0;
+    const displayedSeconds = Math.ceil(remainingMilliseconds / 1000);
+    return remainingMilliseconds - (displayedSeconds - 1) * 1000;
   }
 
   function startTimer(candidate, now) {
     const currentTime = Number.isFinite(now) ? now : Date.now();
     const timer = syncTimer(candidate, currentTime);
     if (timer.phase === 'complete' || timer.running) return timer;
-    const remainingSeconds = timer.remainingSeconds > 0
-      ? timer.remainingSeconds
-      : timer.totalSeconds;
+    const remainingMilliseconds = timer.remainingMilliseconds > 0
+      ? timer.remainingMilliseconds
+      : timer.totalSeconds * 1000;
     return {
       ...timer,
-      remainingSeconds,
+      remainingSeconds: Math.ceil(remainingMilliseconds / 1000),
+      remainingMilliseconds,
       running: true,
-      endsAt: currentTime + remainingSeconds * 1000
+      endsAt: currentTime + remainingMilliseconds
     };
   }
 
@@ -199,7 +222,7 @@
       return { phase: 1, overall: 1, root: 1, sprout: 1 };
     }
     const phaseProgress = timer.totalSeconds
-      ? Math.max(0, Math.min(1, 1 - timer.remainingSeconds / timer.totalSeconds))
+      ? Math.max(0, Math.min(1, 1 - timer.remainingMilliseconds / (timer.totalSeconds * 1000)))
       : 0;
     const focusContribution = timer.phase === 'focus' ? phaseProgress : 0;
     const overall = Math.max(0, Math.min(1,
@@ -228,6 +251,7 @@
     normalizeTimer,
     advancePhase,
     syncTimer,
+    millisecondsUntilNextTick,
     startTimer,
     pauseTimer,
     skipPhase,

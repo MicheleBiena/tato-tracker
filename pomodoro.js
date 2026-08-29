@@ -36,7 +36,7 @@
   };
 
   let timer = loadTimer();
-  let tickInterval = 0;
+  let tickTimeout = 0;
   let lastRenderedSecond = null;
 
   function loadTimer() {
@@ -84,7 +84,7 @@
     if (timer.phase === 'complete') return 'Ciclo completato.';
     if (timer.phase === 'focus') {
       if (timer.running) return 'Sessione in corso.';
-      if (timer.remainingSeconds < timer.totalSeconds) return 'Timer in pausa.';
+      if (phaseHasStarted()) return 'Timer in pausa.';
       return 'Timer pronto.';
     }
     if (timer.running) {
@@ -93,6 +93,10 @@
         : 'Pausa breve in corso.';
     }
     return 'Pausa pronta.';
+  }
+
+  function phaseHasStarted() {
+    return timer.remainingMilliseconds < timer.totalSeconds * 1000;
   }
 
   function plantCaption(progress) {
@@ -178,7 +182,7 @@
       ? 'Nuovo ciclo'
       : timer.running
         ? 'Pausa'
-        : timer.remainingSeconds < timer.totalSeconds
+        : phaseHasStarted()
           ? 'Riprendi'
           : 'Avvia';
     elements.start.querySelector('span').textContent = startLabel;
@@ -200,14 +204,16 @@
   }
 
   function updateTicking() {
-    clearInterval(tickInterval);
-    tickInterval = 0;
-    if (timer.running && timer.phase !== 'complete') {
-      tickInterval = window.setInterval(tick, 400);
-    }
+    clearTimeout(tickTimeout);
+    tickTimeout = 0;
+    if (!timer.running || timer.phase === 'complete' || document.hidden) return;
+    const boundaryDelay = Pomodoro.millisecondsUntilNextTick(timer);
+    tickTimeout = window.setTimeout(tick, Math.max(8, boundaryDelay + 8));
   }
 
   function tick() {
+    clearTimeout(tickTimeout);
+    tickTimeout = 0;
     const previousPhase = timer.phase;
     const previousSession = timer.session;
     timer = Pomodoro.syncTimer(timer);
@@ -219,7 +225,7 @@
         : `${Pomodoro.phaseLabel(timer.phase)}. ${statusText()}`);
     }
     renderTimer(changedPhase);
-    if (!timer.running) updateTicking();
+    updateTicking();
   }
 
   function updateLongBreakFields() {
@@ -360,7 +366,8 @@
     activateHash(location.hash || '#today-section', { scroll: true });
   });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) tick();
+    if (document.hidden) updateTicking();
+    else tick();
   });
   reduceMotion.addEventListener?.('change', () => renderTimer(true));
   window.addEventListener('pagehide', saveTimer);

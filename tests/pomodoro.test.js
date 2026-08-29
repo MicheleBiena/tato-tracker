@@ -37,6 +37,26 @@ test('a timer starts, pauses without drift and resumes from its remaining time',
   assert.equal(timer.endsAt, 161_000);
 });
 
+test('pause and resume preserve sub-second precision', () => {
+  let timer = Pomodoro.createTimer({ focusMinutes: 1 });
+  timer = Pomodoro.startTimer(timer, 1_000);
+  timer = Pomodoro.pauseTimer(timer, 21_375);
+  assert.equal(timer.remainingSeconds, 40);
+  assert.equal(timer.remainingMilliseconds, 39_625);
+
+  timer = Pomodoro.startTimer(timer, 121_000);
+  assert.equal(timer.endsAt, 160_625);
+  assert.equal(Pomodoro.syncTimer(timer, 121_625).remainingSeconds, 39);
+});
+
+test('display ticks align to exact countdown second boundaries', () => {
+  const timer = Pomodoro.startTimer(Pomodoro.createTimer({ focusMinutes: 1 }), 1_000);
+  assert.equal(Pomodoro.millisecondsUntilNextTick(timer, 1_000), 1_000);
+  assert.equal(Pomodoro.millisecondsUntilNextTick(timer, 1_250), 750);
+  assert.equal(Pomodoro.millisecondsUntilNextTick(timer, 2_000), 1_000);
+  assert.equal(Pomodoro.millisecondsUntilNextTick(timer, 60_950), 50);
+});
+
 test('focus sessions alternate with breaks and use a long break at the chosen cadence', () => {
   const config = {
     sessions: 4,

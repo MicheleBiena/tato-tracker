@@ -86,3 +86,8 @@ test('Pomodoro copy is technical and keeps the requested completion phrase', () 
   removedCopy.forEach((phrase) => assert.doesNotMatch(pomodoroCopy, new RegExp(phrase, 'i')));
   assert.match(pomodoroScript, /Tato \\u00e8 spuntato\./);
 });
+
+test('Pomodoro schedules updates on real second boundaries', () => {
+  assert.doesNotMatch(pomodoroScript, /setInterval\s*\(/);
+  assert.match(pomodoroScript, /millisecondsUntilNextTick/);
+});
