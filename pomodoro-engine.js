@@ -154,28 +154,52 @@
     };
   }
 
-  function syncTimer(candidate, now) {
+  function syncTimerWithEvents(candidate, now) {
     const currentTime = Number.isFinite(now) ? now : Date.now();
     let timer = normalizeTimer(candidate, currentTime);
-    if (!timer.running || timer.phase === 'complete') return timer;
+    const events = [];
+    const transitions = [];
+    if (!timer.running || timer.phase === 'complete') return { timer, events, transitions };
 
     let guard = 0;
     while (timer.running && timer.phase !== 'complete' && timer.endsAt <= currentTime && guard < 100) {
       const nextPhaseStart = timer.endsAt;
+      transitions.push({
+        phase: timer.phase,
+        session: timer.session,
+        completedAt: nextPhaseStart,
+        durationSeconds: timer.totalSeconds
+      });
+      if (timer.phase === 'focus') {
+        events.push({
+          id: `focus-${nextPhaseStart}-${timer.session}-${timer.totalSeconds}`,
+          completedAt: nextPhaseStart,
+          durationSeconds: timer.totalSeconds,
+          session: timer.session
+        });
+      }
       timer = advancePhase(timer, { at: nextPhaseStart, keepRunning: true });
       guard += 1;
     }
 
-    if (timer.phase === 'complete') return timer;
+    if (timer.phase === 'complete') return { timer, events, transitions };
     const remainingMilliseconds = Math.max(0, Math.min(
       timer.totalSeconds * 1000,
       timer.endsAt - currentTime
     ));
     return {
-      ...timer,
-      remainingSeconds: Math.ceil(remainingMilliseconds / 1000),
-      remainingMilliseconds
+      timer: {
+        ...timer,
+        remainingSeconds: Math.ceil(remainingMilliseconds / 1000),
+        remainingMilliseconds
+      },
+      events,
+      transitions
     };
+  }
+
+  function syncTimer(candidate, now) {
+    return syncTimerWithEvents(candidate, now).timer;
   }
 
   function millisecondsUntilNextTick(candidate, now) {
@@ -251,6 +275,7 @@
     normalizeTimer,
     advancePhase,
     syncTimer,
+    syncTimerWithEvents,
     millisecondsUntilNextTick,
     startTimer,
     pauseTimer,

@@ -11,7 +11,7 @@ Tato Tracker è un planner di studio statico, pensato per GitHub Pages. Divide l
 - redistribuzione automatica opzionale, rispettando i carichi manuali;
 - riepilogo complessivo e barre di avanzamento per materia;
 - temi chiaro e scuro;
-- seconda vista Pomodoro con sessioni e pause configurabili, pause lunghe opzionali e pianta di patate SVG che cresce con il ciclo;
+- seconda vista Pomodoro con sessioni e pause configurabili, segnale audio, pianta SVG e registro giornaliero delle sessioni completate mostrato anche nel calendario;
 - persistenza in `localStorage` ed export/import JSON.
 
 Al primo avvio vengono mostrati dati di esempio, così tutte le viste sono subito esplorabili. Il pulsante **Ricomincia** crea uno spazio vuoto e questa scelta viene salvata.

@@ -696,9 +696,13 @@ async function main() {
     const quickPhaseScript = await pageCdp.send('Page.addScriptToEvaluateOnNewDocument', {
       source: `(() => {
         window.__pomodoroAlarmPlayCount = 0;
+        window.__pomodoroAlarmPauseCount = 0;
         HTMLMediaElement.prototype.play = function () {
           window.__pomodoroAlarmPlayCount += 1;
           return Promise.resolve();
+        };
+        HTMLMediaElement.prototype.pause = function () {
+          window.__pomodoroAlarmPauseCount += 1;
         };
         try {
           const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'));
@@ -726,13 +730,29 @@ async function main() {
     );
     const restoredPomodoro = await evaluate(pageCdp, `(() => {
       const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'))?.timer;
+      const today = TatoStudyLog.dateKeyAt(Date.now());
+      const study = TatoStudyLog.summaryForDate(
+        TatoStudyLog.load(localStorage),
+        today
+      );
+      const calendarDay = document.querySelector('.calendar-day[data-date="' + today + '"]');
       return {
         viewVisible: !document.querySelector('#pomodoro-view').hidden,
         phase: saved?.phase,
         running: saved?.running,
         completed: saved?.completedSessions,
         rootGrowth: Number(document.querySelector('#potato-plant').style.getPropertyValue('--root-growth')),
-        phaseText: document.querySelector('#timer-phase').textContent.trim()
+        phaseText: document.querySelector('#timer-phase').textContent.trim(),
+        study,
+        dailyTime: document.querySelector('#daily-study-time').textContent.trim(),
+        dailyMessage: document.querySelector('#daily-study-message').textContent.trim(),
+        dailySessions: document.querySelector('#daily-study-sessions').textContent.trim(),
+        calendarBadge: calendarDay?.querySelector('.calendar-study-time')?.textContent.trim() || '',
+        calendarLabel: calendarDay?.getAttribute('aria-label') || '',
+        noticeHidden: document.querySelector('#pomodoro-timeout-notification').hidden,
+        noticeTitle: document.querySelector('#pomodoro-timeout-title').textContent.trim(),
+        noticeDetail: document.querySelector('#pomodoro-timeout-detail').textContent.trim(),
+        alarmLoop: document.querySelector('#pomodoro-alarm').loop
       };
     })()`);
     assert.equal(restoredPomodoro.viewVisible, true, 'Il reload non conserva la vista Pomodoro.');
@@ -741,11 +761,87 @@ async function main() {
     assert.equal(restoredPomodoro.completed, 1);
     assert.ok(restoredPomodoro.rootGrowth > 0, 'Le radici SVG non crescono dopo una sessione.');
     assert.equal(restoredPomodoro.phaseText, 'Pausa breve');
+    assert.deepEqual(restoredPomodoro.study, { seconds: 60, sessions: 1 });
+    assert.equal(restoredPomodoro.dailyTime, '1 min');
+    assert.match(restoredPomodoro.dailyMessage, /tato-alizzato 1 min di studio.*Vai così/i);
+    assert.equal(restoredPomodoro.dailySessions, '1 sessione completata');
+    assert.equal(restoredPomodoro.calendarBadge, '1m');
+    assert.match(restoredPomodoro.calendarLabel, /Pomodoro: 1 min, 1 sessione completata/);
+    assert.equal(restoredPomodoro.noticeHidden, false, 'La notifica non appare alla fine della fase.');
+    assert.equal(restoredPomodoro.noticeTitle, 'Sessione terminata');
+    assert.equal(restoredPomodoro.noticeDetail, 'Pausa breve pronta.');
+    assert.equal(restoredPomodoro.alarmLoop, true, 'Il suono non viene ripetuto durante la notifica.');
     assert.equal(
       await evaluate(pageCdp, `window.__pomodoroAlarmPlayCount`),
       1,
       'Il suono Pomodoro non parte alla fine della fase.'
     );
+    await delay(6_200);
+    const expiredAlert = await evaluate(pageCdp, `({
+      hidden: document.querySelector('#pomodoro-timeout-notification').hidden,
+      alarmLoop: document.querySelector('#pomodoro-alarm').loop,
+      pauseCount: window.__pomodoroAlarmPauseCount
+    })`);
+    assert.equal(expiredAlert.hidden, true, 'La notifica non scompare dopo sei secondi.');
+    assert.equal(expiredAlert.alarmLoop, false, 'Il loop audio continua dopo la notifica.');
+    assert.ok(expiredAlert.pauseCount >= 2, 'Il suono non viene arrestato alla fine della notifica.');
+    await evaluate(pageCdp, `document.querySelector('#timer-test-notification').click()`);
+    const manualAlert = await evaluate(pageCdp, `({
+      hidden: document.querySelector('#pomodoro-timeout-notification').hidden,
+      title: document.querySelector('#pomodoro-timeout-title').textContent.trim(),
+      detail: document.querySelector('#pomodoro-timeout-detail').textContent.trim(),
+      alarmLoop: document.querySelector('#pomodoro-alarm').loop
+    })`);
+    assert.equal(manualAlert.hidden, false, 'Il tasto di test non mostra la notifica.');
+    assert.equal(manualAlert.title, 'Test notifica');
+    assert.equal(manualAlert.detail, 'Suono e avviso attivi per 6 secondi.');
+    assert.equal(manualAlert.alarmLoop, true, 'Il tasto di test non avvia il loop audio.');
+
+    const quickBreakScript = await pageCdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        window.__pomodoroAlarmPlayCount = 0;
+        HTMLMediaElement.prototype.play = function () {
+          window.__pomodoroAlarmPlayCount += 1;
+          return Promise.resolve();
+        };
+        HTMLMediaElement.prototype.pause = function () {};
+        try {
+          const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'));
+          saved.timer.phase = 'shortBreak';
+          saved.timer.session = 1;
+          saved.timer.completedSessions = 1;
+          saved.timer.remainingSeconds = 1;
+          saved.timer.remainingMilliseconds = 250;
+          saved.timer.running = true;
+          saved.timer.endsAt = Date.now() + 250;
+          localStorage.setItem('tato-tracker-pomodoro-v1', JSON.stringify(saved));
+        } catch (_) {}
+      })();`
+    });
+    const pomodoroBreakReload = pageCdp.once('Page.loadEventFired');
+    await pageCdp.send('Page.reload', { ignoreCache: true });
+    await pomodoroBreakReload;
+    await pageCdp.send('Page.removeScriptToEvaluateOnNewDocument', {
+      identifier: quickBreakScript.identifier
+    });
+    await waitForPage(
+      pageCdp,
+      `JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer?.phase === 'focus'
+        && JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer?.session === 2`,
+      'avanzamento Pomodoro alla fine della pausa'
+    );
+    const breakAlert = await evaluate(pageCdp, `({
+      hidden: document.querySelector('#pomodoro-timeout-notification').hidden,
+      title: document.querySelector('#pomodoro-timeout-title').textContent.trim(),
+      detail: document.querySelector('#pomodoro-timeout-detail').textContent.trim(),
+      alarmLoop: document.querySelector('#pomodoro-alarm').loop,
+      playCount: window.__pomodoroAlarmPlayCount
+    })`);
+    assert.equal(breakAlert.hidden, false, 'La notifica non appare alla fine della pausa.');
+    assert.equal(breakAlert.title, 'Pausa terminata');
+    assert.equal(breakAlert.detail, 'Sessione 2 pronta.');
+    assert.equal(breakAlert.alarmLoop, true, 'Il suono non viene ripetuto alla fine della pausa.');
+    assert.equal(breakAlert.playCount, 1, 'Il suono non parte alla fine della pausa.');
     await evaluate(pageCdp, `document.querySelector('#timer-start').click()`);
 
     await evaluate(pageCdp, `document.querySelector('.mobile-nav a[href="#today-section"]').click()`);
@@ -917,7 +1013,8 @@ async function main() {
           download: captured.download,
           app: payload.app,
           schemaVersion: payload.schemaVersion,
-          titles: payload.goals.map((goal) => goal.title)
+          titles: payload.goals.map((goal) => goal.title),
+          pomodoroEvents: payload.pomodoroStudy?.events || []
         };
       } finally {
         HTMLAnchorElement.prototype.click = originalClick;
@@ -930,6 +1027,8 @@ async function main() {
     assert.equal(exported.schemaVersion, 1);
     assert.ok(exported.titles.includes(smokeGoalTitle), 'Il backup esportato non contiene l\'obiettivo settimanale.');
     assert.ok(exported.titles.includes(specificGoalTitle), 'Il backup esportato non contiene l\'obiettivo con date specifiche.');
+    assert.equal(exported.pomodoroEvents.length, 1, 'Il backup non contiene lo storico Pomodoro.');
+    assert.equal(exported.pomodoroEvents[0].durationSeconds, 60);
 
     const layoutAfterSpecificGoal = await mobileLayoutSnapshot(pageCdp);
     assertNoHorizontalOverflow(layoutAfterSpecificGoal, 'Dashboard dopo obiettivo specifico');
@@ -1076,8 +1175,10 @@ async function main() {
     await evaluate(pageCdp, `document.querySelector('#confirm-accept').click()`);
     await waitForPage(pageCdp, `document.querySelectorAll('.goal-card').length === 0`, 'reset dei dati');
     const resetState = await evaluate(pageCdp, `JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)}) || 'null')`);
+    const resetStudy = await evaluate(pageCdp, `TatoStudyLog.load(localStorage)`);
     assert.deepEqual(resetState?.goals, [], 'Il reset non salva uno spazio vuoto.');
     assert.equal(resetState?.settings?.sampleData, false, 'Il reset riattiva i dati demo.');
+    assert.deepEqual(resetStudy?.events, [], 'Il reset non cancella lo storico Pomodoro.');
 
     const resetReload = pageCdp.once('Page.loadEventFired');
     await pageCdp.send('Page.reload', { ignoreCache: true });
@@ -1118,7 +1219,7 @@ async function main() {
     console.log(`  viewport ${mobileLayout.innerWidth}x${mobileLayout.innerHeight}, scrollWidth ${mobileLayout.scrollWidth}`);
     console.log(`  demo ${dashboard.goalCards} obiettivi, tema ${theme.before} -> ${theme.after}`);
     console.log('  calendario 6x7 verificato su mese corrente, successivo e precedente');
-    console.log('  Pomodoro configurabile, persistente e SVG progressivo verificato');
+    console.log('  Pomodoro, audio, SVG e storico giornaliero nel calendario verificati');
     console.log('  modale, obiettivi weekly/specific, export/import/reset e recupero localStorage verificati');
   } catch (error) {
     const exitDetail = browserExit

@@ -23,6 +23,10 @@
   --danger-hover: #96332f;
   --danger-on: #ffffff;
   --danger-soft: #f7dfdc;
+  --attention-a: #ffd447;
+  --attention-b: #ff745f;
+  --attention-surface: #fffdf4;
+  --attention-ink: #24170f;
   --plant-soil-back: #b67e55;
   --plant-soil-front: #82563d;
   --plant-soil-line: #6f4934;
@@ -69,6 +73,10 @@
   --danger-hover: #ffb0ac;
   --danger-on: #261716;
   --danger-soft: #4b2d2c;
+  --attention-a: #ffd447;
+  --attention-b: #ff745f;
+  --attention-surface: #fff8df;
+  --attention-ink: #21130d;
   --plant-soil-back: #704c38;
   --plant-soil-front: #4f3428;
   --plant-soil-line: #d0a37a;
@@ -1035,6 +1043,38 @@ main {
   margin-bottom: 6px;
 }
 
+.calendar-day-metrics {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.calendar-study-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.59rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.calendar-study-time svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
 .calendar-date {
   display: grid;
   width: 27px;
@@ -1526,6 +1566,71 @@ main {
   gap: 24px;
 }
 
+.daily-study-card {
+  display: grid;
+  gap: 12px;
+  background:
+    radial-gradient(circle at 92% 8%, color-mix(in srgb, var(--honey-soft) 78%, transparent), transparent 9rem),
+    var(--surface);
+}
+
+.daily-study-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.daily-study-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.daily-study-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.daily-study-time {
+  color: var(--text-strong);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: clamp(2.25rem, 4vw, 3.35rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.065em;
+  line-height: 1;
+}
+
+.daily-study-message,
+.daily-study-sessions {
+  margin: 0;
+}
+
+.daily-study-message {
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.daily-study-sessions {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .timer-panel {
   overflow: hidden;
 }
@@ -1539,6 +1644,7 @@ main {
 }
 
 .timer-heading-row h2,
+.daily-study-card h2,
 .cycle-summary h2 {
   margin: 0;
   color: var(--text-strong);
@@ -2536,6 +2642,101 @@ main {
   transform: translateY(0);
 }
 
+.pomodoro-timeout-notification {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  place-items: center;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--attention-a) 76%, transparent);
+  pointer-events: none;
+  animation: pomodoro-attention-backdrop 1200ms ease-in-out infinite alternate;
+}
+
+.pomodoro-timeout-card {
+  display: grid;
+  width: min(920px, 100%);
+  min-height: min(54dvh, 540px);
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: clamp(24px, 5vw, 54px);
+  align-items: center;
+  padding: clamp(32px, 6vw, 76px);
+  border: clamp(5px, 0.7vw, 9px) solid var(--attention-ink);
+  border-radius: clamp(28px, 5vw, 56px);
+  background: var(--attention-surface);
+  color: var(--attention-ink);
+  box-shadow:
+    0 0 0 clamp(10px, 2vw, 24px) color-mix(in srgb, var(--attention-surface) 62%, transparent),
+    0 32px 100px rgba(22, 11, 4, 0.48);
+  animation: pomodoro-attention-card 600ms ease-in-out infinite alternate;
+}
+
+.pomodoro-timeout-icon {
+  display: grid;
+  width: 128px;
+  height: 128px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--attention-ink);
+  color: var(--attention-a);
+}
+
+.pomodoro-timeout-icon svg {
+  width: 70px;
+  height: 70px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.pomodoro-timeout-copy {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pomodoro-timeout-copy strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(3.2rem, 8vw, 6.8rem);
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+}
+
+.pomodoro-timeout-copy > span {
+  color: var(--attention-ink);
+  font-size: clamp(1.15rem, 2.4vw, 1.8rem);
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+@keyframes pomodoro-attention-backdrop {
+  0% {
+    background-color: color-mix(in srgb, var(--attention-a) 76%, transparent);
+  }
+
+  100% {
+    background-color: color-mix(in srgb, var(--attention-b) 82%, transparent);
+  }
+}
+
+@keyframes pomodoro-attention-card {
+  from {
+    transform: scale(0.94);
+  }
+
+  to {
+    transform: scale(1.02);
+  }
+}
+
 .hidden {
   display: none !important;
 }
@@ -2794,6 +2995,26 @@ main {
     display: none;
   }
 
+  .calendar-study-time {
+    position: absolute;
+    top: 4px;
+    right: 3px;
+    width: 16px;
+    height: 16px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 5px;
+  }
+
+  .calendar-study-time span {
+    display: none;
+  }
+
+  .calendar-study-time svg {
+    width: 10px;
+    height: 10px;
+  }
+
   .calendar-tasks {
     display: flex;
     flex-wrap: wrap;
@@ -3048,6 +3269,28 @@ main {
     grid-column: 1 / -1;
   }
 
+  .timer-controls .timer-test-notification {
+    grid-column: 1 / -1;
+  }
+
+  .pomodoro-timeout-card {
+    min-height: min(62dvh, 520px);
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 24px;
+    text-align: center;
+  }
+
+  .pomodoro-timeout-icon {
+    width: 104px;
+    height: 104px;
+  }
+
+  .pomodoro-timeout-icon svg {
+    width: 58px;
+    height: 58px;
+  }
+
   .pomodoro-sidebar {
     grid-template-columns: 1fr;
   }
@@ -3159,6 +3402,15 @@ main {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .pomodoro-timeout-card {
+    animation: none;
+  }
+
+  .pomodoro-timeout-notification {
+    background: color-mix(in srgb, var(--attention-a) 82%, transparent);
+    animation: none;
   }
 }
 

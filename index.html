@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="styles.css" />
     <script src="planner.js" defer></script>
     <script src="pomodoro-engine.js" defer></script>
+    <script src="study-log.js" defer></script>
     <script src="app.js" defer></script>
     <script src="pomodoro.js" defer></script>
   </head>
@@ -304,7 +305,8 @@
               </div>
               <p class="calendar-help">
                 <svg><use href="#icon-info" /></svg> Seleziona un giorno per
-                cambiare il carico o tenerlo libero.
+                cambiare il carico; l&rsquo;icona timer indica lo studio Po-Tato
+                completato.
               </p>
               <div class="calendar-weekdays" aria-hidden="true">
                 <span>Lun</span><span>Mar</span><span>Mer</span><span>Gio</span
@@ -427,7 +429,7 @@
         hidden
         aria-labelledby="pomodoro-title"
       >
-        <h1 class="sr-only" id="pomodoro-title">Pomodoro</h1>
+        <h1 class="sr-only" id="pomodoro-title">Po-Tato</h1>
         <div class="pomodoro-layout">
           <section class="panel timer-panel" aria-labelledby="timer-heading">
             <div class="timer-heading-row">
@@ -612,11 +614,26 @@
                       stroke-width="9"
                     />
                     <g class="potato-branches" stroke-width="3">
-                      <path class="potato-branch" d="M268 116c8-22 13-44 15-60" />
-                      <path class="potato-branch" d="M262 175c-23-11-46-22-72-27" />
-                      <path class="potato-branch" d="M265 151c25-14 50-30 69-42" />
-                      <path class="potato-branch" d="M260 201c-21-7-42-12-58-11" />
-                      <path class="potato-branch" d="M262 184c20-7 42-13 59-13" />
+                      <path
+                        class="potato-branch"
+                        d="M268 116c8-22 13-44 15-60"
+                      />
+                      <path
+                        class="potato-branch"
+                        d="M262 175c-23-11-46-22-72-27"
+                      />
+                      <path
+                        class="potato-branch"
+                        d="M265 151c25-14 50-30 69-42"
+                      />
+                      <path
+                        class="potato-branch"
+                        d="M260 201c-21-7-42-12-58-11"
+                      />
+                      <path
+                        class="potato-branch"
+                        d="M262 184c20-7 42-13 59-13"
+                      />
                     </g>
                   </g>
                   <g fill="var(--soil-speck)" opacity="0.55">
@@ -682,12 +699,48 @@
                   >
                     <svg><use href="#icon-refresh" /></svg>Ricomincia
                   </button>
+                  <button
+                    class="button button-quiet timer-test-notification"
+                    id="timer-test-notification"
+                    type="button"
+                  >
+                    <svg><use href="#icon-timer" /></svg>Test notifica
+                  </button>
                 </div>
               </div>
             </div>
           </section>
 
           <aside class="pomodoro-sidebar">
+            <section
+              class="panel daily-study-card"
+              aria-labelledby="daily-study-title"
+            >
+              <div class="daily-study-header">
+                <div>
+                  <p class="section-kicker">Oggi</p>
+                  <h2 id="daily-study-title">Studio completato</h2>
+                </div>
+                <span class="daily-study-icon" aria-hidden="true">
+                  <svg><use href="#icon-timer" /></svg>
+                </span>
+              </div>
+              <output class="daily-study-time" id="daily-study-time"
+                >0 min</output
+              >
+              <p
+                class="daily-study-message"
+                id="daily-study-message"
+                aria-live="polite"
+              >
+                Completa una sessione di concentrazione per iniziare il
+                conteggio di oggi.
+              </p>
+              <p class="daily-study-sessions" id="daily-study-sessions">
+                0 sessioni completate
+              </p>
+            </section>
+
             <form
               class="panel pomodoro-settings"
               id="pomodoro-settings"
@@ -831,7 +884,7 @@
         ><svg><use href="#icon-target" /></svg><span>Obiettivi</span></a
       >
       <a href="#pomodoro-view"
-        ><svg><use href="#icon-timer" /></svg><span>Pomodoro</span></a
+        ><svg><use href="#icon-timer" /></svg><span>Po-Tato</span></a
       >
       <button type="button" data-open-goal>
         <svg><use href="#icon-plus" /></svg><span>Nuovo</span>
@@ -1170,6 +1223,24 @@
       </div>
     </dialog>
 
+    <div
+      class="pomodoro-timeout-notification"
+      id="pomodoro-timeout-notification"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="true"
+      hidden
+    >
+      <div class="pomodoro-timeout-card">
+        <span class="pomodoro-timeout-icon" aria-hidden="true">
+          <svg><use href="#icon-timer" /></svg>
+        </span>
+        <span class="pomodoro-timeout-copy">
+          <strong id="pomodoro-timeout-title">Sessione terminata</strong>
+          <span id="pomodoro-timeout-detail">Pausa pronta.</span>
+        </span>
+      </div>
+    </div>
     <div
       class="toast"
       id="toast"

@@ -4,8 +4,8 @@
   "private": true,
   "description": "Planner di studio locale e rilassante, pronto per GitHub Pages.",
   "scripts": {
-    "test": "node --test tests/*.test.js",
-    "check": "node --check planner.js && node --check app.js && node --check pomodoro-engine.js && node --check pomodoro.js && npm test",
+    "test": "node --preserve-symlinks-main --test tests/*.test.js",
+    "check": "node --preserve-symlinks-main --check planner.js && node --preserve-symlinks-main --check app.js && node --preserve-symlinks-main --check pomodoro-engine.js && node --preserve-symlinks-main --check study-log.js && node --preserve-symlinks-main --check pomodoro.js && npm test",
     "test:browser": "node --preserve-symlinks-main tests/browser-smoke.mjs"
   }
 }

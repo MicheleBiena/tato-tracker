@@ -2,9 +2,11 @@
   'use strict';
 
   const Pomodoro = globalThis.TatoPomodoro;
-  if (!Pomodoro) return;
+  const StudyLog = globalThis.TatoStudyLog;
+  if (!Pomodoro || !StudyLog) return;
 
   const STORAGE_KEY = 'tato-tracker-pomodoro-v1';
+  const ATTENTION_DURATION_MS = 6000;
   const PLANNER_TITLE = 'Tato Tracker \u2014 Studio, con calma';
   const plannerView = document.querySelector('#main-content');
   const pomodoroView = document.querySelector('#pomodoro-view');
@@ -25,7 +27,11 @@
     start: document.querySelector('#timer-start'),
     skip: document.querySelector('#timer-skip'),
     reset: document.querySelector('#timer-reset'),
+    testNotification: document.querySelector('#timer-test-notification'),
     alarm: document.querySelector('#pomodoro-alarm'),
+    timeoutNotification: document.querySelector('#pomodoro-timeout-notification'),
+    timeoutTitle: document.querySelector('#pomodoro-timeout-title'),
+    timeoutDetail: document.querySelector('#pomodoro-timeout-detail'),
     plant: document.querySelector('#potato-plant'),
     plantDescription: document.querySelector('#potato-plant-description'),
     plantCaption: document.querySelector('#plant-caption'),
@@ -33,20 +39,27 @@
     cyclePreview: document.querySelector('#cycle-preview'),
     formError: document.querySelector('#pomodoro-form-error'),
     longBreakEnabled: document.querySelector('#long-break-enabled'),
-    longBreakFields: document.querySelector('#long-break-fields')
+    longBreakFields: document.querySelector('#long-break-fields'),
+    dailyStudyTime: document.querySelector('#daily-study-time'),
+    dailyStudyMessage: document.querySelector('#daily-study-message'),
+    dailyStudySessions: document.querySelector('#daily-study-sessions')
   };
 
+  let studyLog = StudyLog.load(localStorage);
   let timer = loadTimer();
   let tickTimeout = 0;
   let lastRenderedSecond = null;
   let alarmPrimed = false;
+  let timeoutNoticeTimer = 0;
 
   function loadTimer() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return Pomodoro.createTimer();
       const parsed = JSON.parse(raw);
-      return Pomodoro.syncTimer(parsed.timer || parsed);
+      const result = Pomodoro.syncTimerWithEvents(parsed.timer || parsed);
+      recordCompletionEvents(result.events);
+      return result.timer;
     } catch (_) {
       return Pomodoro.createTimer();
     }
@@ -60,6 +73,28 @@
       elements.status.textContent = 'Salvataggio locale non riuscito. Il timer continua a funzionare.';
       return false;
     }
+  }
+
+  function recordCompletionEvents(events) {
+    const result = StudyLog.addEvents(studyLog, events);
+    studyLog = result.log;
+    if (!result.added.length) return 0;
+    const saved = StudyLog.save(studyLog, localStorage);
+    renderDailyStudy();
+    if (!saved) return result.added.length;
+    window.dispatchEvent(new CustomEvent('tato:pomodoro-study-updated', {
+      detail: {
+        dates: [...new Set(result.added.map((event) => StudyLog.dateKeyAt(event.completedAt)))]
+      }
+    }));
+    return result.added.length;
+  }
+
+  function syncAndRecordTimer(now) {
+    const result = Pomodoro.syncTimerWithEvents(timer, now);
+    timer = result.timer;
+    recordCompletionEvents(result.events);
+    return result;
   }
 
   function formatCountdown(seconds) {
@@ -149,6 +184,20 @@
     renderCyclePreview();
   }
 
+  function renderDailyStudy() {
+    const today = StudyLog.dateKeyAt(Date.now());
+    const summary = StudyLog.summaryForDate(studyLog, today);
+    const duration = StudyLog.formatDuration(summary.seconds);
+    elements.dailyStudyTime.value = duration;
+    elements.dailyStudyTime.textContent = duration;
+    elements.dailyStudyMessage.textContent = summary.sessions
+      ? `Oggi hai tato-alizzato ${duration} di studio! Vai cos\u00ec!`
+      : 'Completa una sessione di concentrazione per iniziare il conteggio di oggi.';
+    elements.dailyStudySessions.textContent = summary.sessions === 1
+      ? '1 sessione completata'
+      : `${summary.sessions} sessioni completate`;
+  }
+
   function renderTimer(force) {
     const remaining = timer.remainingSeconds;
     if (!force && remaining === lastRenderedSecond) return;
@@ -214,6 +263,7 @@
   function primeAlarm() {
     if (!elements.alarm || alarmPrimed) return;
     alarmPrimed = true;
+    elements.alarm.loop = false;
     elements.alarm.muted = true;
     const playback = elements.alarm.play();
     if (!playback?.then) {
@@ -230,12 +280,54 @@
     });
   }
 
-  function playAlarm() {
+  function stopAlarm() {
+    if (!elements.alarm) return;
+    elements.alarm.loop = false;
+    resetAlarmPlayback();
+  }
+
+  function playAlarmLoop() {
     if (!elements.alarm) return;
     resetAlarmPlayback();
+    elements.alarm.loop = true;
     elements.alarm.muted = false;
     const playback = elements.alarm.play();
     playback?.catch(() => {});
+  }
+
+  function completionNoticeCopy(transition) {
+    if (transition.phase === 'focus') {
+      return {
+        title: 'Sessione terminata',
+        detail: timer.phase === 'complete'
+          ? 'Ciclo completato.'
+          : `${Pomodoro.phaseLabel(timer.phase)} pronta.`
+      };
+    }
+    return {
+      title: 'Pausa terminata',
+      detail: `Sessione ${timer.session} pronta.`
+    };
+  }
+
+  function hideTimeoutNotification() {
+    clearTimeout(timeoutNoticeTimer);
+    timeoutNoticeTimer = 0;
+    if (elements.timeoutNotification) elements.timeoutNotification.hidden = true;
+    stopAlarm();
+  }
+
+  function showTimeoutNotification(transition, customCopy) {
+    if ((!transition && !customCopy) || !elements.timeoutNotification) return;
+    const copy = customCopy || completionNoticeCopy(transition);
+    clearTimeout(timeoutNoticeTimer);
+    elements.timeoutNotification.hidden = true;
+    elements.timeoutTitle.textContent = copy.title;
+    elements.timeoutDetail.textContent = copy.detail;
+    void elements.timeoutNotification.offsetWidth;
+    elements.timeoutNotification.hidden = false;
+    playAlarmLoop();
+    timeoutNoticeTimer = window.setTimeout(hideTimeoutNotification, ATTENTION_DURATION_MS);
   }
 
   function updateTicking() {
@@ -251,10 +343,10 @@
     tickTimeout = 0;
     const previousPhase = timer.phase;
     const previousSession = timer.session;
-    timer = Pomodoro.syncTimer(timer);
+    const result = syncAndRecordTimer();
     const changedPhase = timer.phase !== previousPhase || timer.session !== previousSession;
-    if (changedPhase) {
-      playAlarm();
+    if (result.transitions.length) {
+      showTimeoutNotification(result.transitions.at(-1));
       saveTimer();
       announce(timer.phase === 'complete'
         ? 'Ciclo Pomodoro completato.'
@@ -331,6 +423,7 @@
     elements.skipLink.href = pomodoroActive ? '#pomodoro-view' : '#main-content';
     setNavigationState(hash);
     renderTimer(true);
+    renderDailyStudy();
 
     if (!pomodoroActive) document.title = PLANNER_TITLE;
     const target = document.querySelector(hash || '#main-content');
@@ -352,6 +445,7 @@
 
   elements.start.addEventListener('click', () => {
     primeAlarm();
+    syncAndRecordTimer();
     if (timer.phase === 'complete') timer = Pomodoro.createTimer(timer.config);
     timer = timer.running ? Pomodoro.pauseTimer(timer) : Pomodoro.startTimer(timer);
     saveTimer();
@@ -361,6 +455,7 @@
   });
 
   elements.skip.addEventListener('click', () => {
+    syncAndRecordTimer();
     const previousPhase = timer.phase;
     timer = Pomodoro.skipPhase(timer);
     saveTimer();
@@ -370,6 +465,7 @@
   });
 
   elements.reset.addEventListener('click', () => {
+    syncAndRecordTimer();
     timer = Pomodoro.createTimer(timer.config);
     saveTimer();
     renderTimer(true);
@@ -377,11 +473,19 @@
     announce('Ciclo Pomodoro reimpostato alla sessione 1.');
   });
 
+  elements.testNotification.addEventListener('click', () => {
+    showTimeoutNotification(null, {
+      title: 'Test notifica',
+      detail: 'Suono e avviso attivi per 6 secondi.'
+    });
+  });
+
   elements.longBreakEnabled.addEventListener('change', updateLongBreakFields);
 
   settingsForm.addEventListener('submit', (event) => {
     event.preventDefault();
     if (!validateSettings()) return;
+    syncAndRecordTimer();
     timer = Pomodoro.createTimer(configFromForm());
     saveTimer();
     renderSettings();
@@ -403,14 +507,31 @@
     activateHash(location.hash || '#today-section', { scroll: true });
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) updateTicking();
+    if (document.hidden) {
+      hideTimeoutNotification();
+      updateTicking();
+    }
     else tick();
   });
+  window.addEventListener('tato:pomodoro-study-updated', () => {
+    studyLog = StudyLog.load(localStorage);
+    renderDailyStudy();
+  });
+  window.addEventListener('storage', (event) => {
+    if (event.key !== StudyLog.STORAGE_KEY) return;
+    studyLog = StudyLog.load(localStorage);
+    renderDailyStudy();
+  });
   reduceMotion.addEventListener?.('change', () => renderTimer(true));
-  window.addEventListener('pagehide', saveTimer);
+  window.addEventListener('pagehide', () => {
+    hideTimeoutNotification();
+    syncAndRecordTimer();
+    saveTimer();
+  });
 
   saveTimer();
   renderSettings();
+  renderDailyStudy();
   renderTimer(true);
   updateTicking();
   activateHash(location.hash || '#today-section', { scroll: false });

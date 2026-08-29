@@ -111,6 +111,48 @@ test('sync catches up across several phases after a backgrounded tab', () => {
   assert.equal(timer.running, true);
 });
 
+test('sync reports every naturally completed focus session with its completion time', () => {
+  let timer = Pomodoro.createTimer({
+    sessions: 3,
+    focusMinutes: 1,
+    shortBreakMinutes: 1,
+    longBreakEnabled: true,
+    longBreakEvery: 2,
+    longBreakMinutes: 2
+  });
+  timer = Pomodoro.startTimer(timer, 1);
+  const result = Pomodoro.syncTimerWithEvents(timer, 300_001);
+  assert.equal(result.timer.phase, 'focus');
+  assert.equal(result.timer.session, 3);
+  assert.deepEqual(result.events.map((event) => ({
+    completedAt: event.completedAt,
+    durationSeconds: event.durationSeconds,
+    session: event.session
+  })), [
+    { completedAt: 60_001, durationSeconds: 60, session: 1 },
+    { completedAt: 180_001, durationSeconds: 60, session: 2 }
+  ]);
+  assert.deepEqual(result.transitions.map((transition) => ({
+    phase: transition.phase,
+    completedAt: transition.completedAt,
+    session: transition.session
+  })), [
+    { phase: 'focus', completedAt: 60_001, session: 1 },
+    { phase: 'shortBreak', completedAt: 120_001, session: 1 },
+    { phase: 'focus', completedAt: 180_001, session: 2 },
+    { phase: 'longBreak', completedAt: 300_001, session: 2 }
+  ]);
+});
+
+test('manually skipped focus phases do not produce completion events', () => {
+  let timer = Pomodoro.startTimer(Pomodoro.createTimer({ sessions: 2, focusMinutes: 1 }), 0);
+  timer = Pomodoro.skipPhase(timer, 20_000);
+  const result = Pomodoro.syncTimerWithEvents(timer, 20_000);
+  assert.equal(result.timer.phase, 'shortBreak');
+  assert.deepEqual(result.events, []);
+  assert.deepEqual(result.transitions, []);
+});
+
 test('skipping preserves the running state and progress grows only during focus', () => {
   let timer = Pomodoro.createTimer({ sessions: 2, focusMinutes: 1, shortBreakMinutes: 1 });
   timer = Pomodoro.startTimer(timer, 0);
