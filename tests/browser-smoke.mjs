@@ -695,6 +695,11 @@ async function main() {
 
     const quickPhaseScript = await pageCdp.send('Page.addScriptToEvaluateOnNewDocument', {
       source: `(() => {
+        window.__pomodoroAlarmPlayCount = 0;
+        HTMLMediaElement.prototype.play = function () {
+          window.__pomodoroAlarmPlayCount += 1;
+          return Promise.resolve();
+        };
         try {
           const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'));
           saved.timer.phase = 'focus';
@@ -736,6 +741,11 @@ async function main() {
     assert.equal(restoredPomodoro.completed, 1);
     assert.ok(restoredPomodoro.rootGrowth > 0, 'Le radici SVG non crescono dopo una sessione.');
     assert.equal(restoredPomodoro.phaseText, 'Pausa breve');
+    assert.equal(
+      await evaluate(pageCdp, `window.__pomodoroAlarmPlayCount`),
+      1,
+      'Il suono Pomodoro non parte alla fine della fase.'
+    );
     await evaluate(pageCdp, `document.querySelector('#timer-start').click()`);
 
     await evaluate(pageCdp, `document.querySelector('.mobile-nav a[href="#today-section"]').click()`);

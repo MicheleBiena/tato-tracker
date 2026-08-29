@@ -25,6 +25,7 @@
     start: document.querySelector('#timer-start'),
     skip: document.querySelector('#timer-skip'),
     reset: document.querySelector('#timer-reset'),
+    alarm: document.querySelector('#pomodoro-alarm'),
     plant: document.querySelector('#potato-plant'),
     plantDescription: document.querySelector('#potato-plant-description'),
     plantCaption: document.querySelector('#plant-caption'),
@@ -38,6 +39,7 @@
   let timer = loadTimer();
   let tickTimeout = 0;
   let lastRenderedSecond = null;
+  let alarmPrimed = false;
 
   function loadTimer() {
     try {
@@ -203,6 +205,39 @@
     requestAnimationFrame(() => { elements.announcer.textContent = message; });
   }
 
+  function resetAlarmPlayback() {
+    if (!elements.alarm) return;
+    elements.alarm.pause();
+    elements.alarm.currentTime = 0;
+  }
+
+  function primeAlarm() {
+    if (!elements.alarm || alarmPrimed) return;
+    alarmPrimed = true;
+    elements.alarm.muted = true;
+    const playback = elements.alarm.play();
+    if (!playback?.then) {
+      resetAlarmPlayback();
+      elements.alarm.muted = false;
+      return;
+    }
+    playback.then(() => {
+      resetAlarmPlayback();
+      elements.alarm.muted = false;
+    }).catch(() => {
+      elements.alarm.muted = false;
+      alarmPrimed = false;
+    });
+  }
+
+  function playAlarm() {
+    if (!elements.alarm) return;
+    resetAlarmPlayback();
+    elements.alarm.muted = false;
+    const playback = elements.alarm.play();
+    playback?.catch(() => {});
+  }
+
   function updateTicking() {
     clearTimeout(tickTimeout);
     tickTimeout = 0;
@@ -219,6 +254,7 @@
     timer = Pomodoro.syncTimer(timer);
     const changedPhase = timer.phase !== previousPhase || timer.session !== previousSession;
     if (changedPhase) {
+      playAlarm();
       saveTimer();
       announce(timer.phase === 'complete'
         ? 'Ciclo Pomodoro completato.'
@@ -315,6 +351,7 @@
   }
 
   elements.start.addEventListener('click', () => {
+    primeAlarm();
     if (timer.phase === 'complete') timer = Pomodoro.createTimer(timer.config);
     timer = timer.running ? Pomodoro.pauseTimer(timer) : Pomodoro.startTimer(timer);
     saveTimer();

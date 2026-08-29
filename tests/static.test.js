@@ -56,6 +56,7 @@ test('Pomodoro view exposes timer controls, labelled settings and an SVG plant',
   assert.match(html, /for="pomodoro-break"/);
   assert.match(html, /class="potato-root"/);
   assert.match(html, /class="potato-sprout"/);
+  assert.match(html, /<audio[^>]+id="pomodoro-alarm"[^>]+src="snd_flowery_voiceclip_jarona1\.mp3"[^>]+preload="auto"/s);
   assert.match(html, /class="potato-stem"/);
   assert.equal((html.match(/class="potato-branch"/g) || []).length, 5);
   assert.ok(
@@ -90,4 +91,9 @@ test('Pomodoro copy is technical and keeps the requested completion phrase', () 
 test('Pomodoro schedules updates on real second boundaries', () => {
   assert.doesNotMatch(pomodoroScript, /setInterval\s*\(/);
   assert.match(pomodoroScript, /millisecondsUntilNextTick/);
+});
+
+test('Pomodoro alarm is primed by user input and played on phase completion', () => {
+  assert.match(pomodoroScript, /elements\.start\.addEventListener\('click',[\s\S]*?primeAlarm\(\)/);
+  assert.match(pomodoroScript, /if \(changedPhase\) \{\s*playAlarm\(\)/);
 });
