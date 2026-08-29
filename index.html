@@ -23,7 +23,9 @@
     </script>
     <link rel="stylesheet" href="styles.css" />
     <script src="planner.js" defer></script>
+    <script src="pomodoro-engine.js" defer></script>
     <script src="app.js" defer></script>
+    <script src="pomodoro.js" defer></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Vai al contenuto</a>
@@ -100,6 +102,19 @@
       <symbol id="icon-arrow" viewBox="0 0 24 24">
         <path d="M5 12h14M13 6l6 6-6 6" />
       </symbol>
+      <symbol id="icon-timer" viewBox="0 0 24 24">
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v5l3 2M9 2h6M12 5V2" />
+      </symbol>
+      <symbol id="icon-play" viewBox="0 0 24 24">
+        <path d="m8 5 11 7-11 7Z" />
+      </symbol>
+      <symbol id="icon-pause" viewBox="0 0 24 24">
+        <path d="M9 5v14M15 5v14" />
+      </symbol>
+      <symbol id="icon-skip" viewBox="0 0 24 24">
+        <path d="m6 5 9 7-9 7ZM18 5v14" />
+      </symbol>
     </svg>
 
     <div class="app-shell">
@@ -126,6 +141,9 @@
           <a class="nav-link" href="#today-section">Oggi</a>
           <a class="nav-link" href="#calendar-section">Calendario</a>
           <a class="nav-link" href="#goals-section">Obiettivi</a>
+          <a class="nav-link" href="#pomodoro-view"
+            ><svg><use href="#icon-timer" /></svg>Pomodoro</a
+          >
         </nav>
 
         <div class="topbar-actions">
@@ -402,6 +420,265 @@
         </section>
       </main>
 
+      <main
+        class="pomodoro-view"
+        id="pomodoro-view"
+        tabindex="-1"
+        hidden
+        aria-labelledby="pomodoro-title"
+      >
+        <section class="pomodoro-intro">
+          <div>
+            <p class="eyebrow">Una sessione alla volta</p>
+            <h1 id="pomodoro-title">Coltiva la concentrazione.</h1>
+            <p>
+              Alterna studio e pause con un ritmo sostenibile. A ogni sessione
+              completata, le radici di Tato crescono un po&rsquo; di pi&ugrave;.
+            </p>
+          </div>
+          <span class="pomodoro-intro-badge" aria-hidden="true">
+            <svg><use href="#icon-timer" /></svg>
+          </span>
+        </section>
+
+        <div class="pomodoro-layout">
+          <section class="panel timer-panel" aria-labelledby="timer-heading">
+            <div class="timer-heading-row">
+              <div>
+                <p class="section-kicker">Ciclo attuale</p>
+                <h2 id="timer-heading">Timer Pomodoro</h2>
+              </div>
+              <span class="timer-phase" id="timer-phase">Concentrazione</span>
+            </div>
+
+            <div class="timer-stage">
+              <div class="potato-illustration">
+                <svg
+                  class="potato-plant"
+                  id="potato-plant"
+                  viewBox="0 0 520 420"
+                  role="img"
+                  aria-labelledby="potato-plant-title potato-plant-description"
+                >
+                  <title id="potato-plant-title">Pianta di patate in crescita</title>
+                  <desc id="potato-plant-description">
+                    Le radici crescono sotto terra durante le sessioni di studio e il germoglio emerge verso la fine del ciclo.
+                  </desc>
+                  <rect width="520" height="420" rx="38" fill="var(--plant-sky)" />
+                  <circle cx="418" cy="74" r="31" fill="var(--plant-sun)" opacity="0.9" />
+                  <path d="M0 224C81 208 139 233 220 219c90-16 163-4 300 5v196H0Z" fill="var(--soil-back)" />
+                  <path d="M0 260c78-18 142 10 220-5 100-19 196-4 300 10v155H0Z" fill="var(--soil-front)" opacity="0.5" />
+                  <g fill="none" stroke="var(--root-color)" stroke-linecap="round" stroke-linejoin="round">
+                    <path class="potato-root" pathLength="1" d="M260 218c-5 43 4 78-11 118-6 18-17 35-31 49" stroke-width="7" />
+                    <path class="potato-root" pathLength="1" d="M257 266c-33 6-55 26-70 54-8 15-13 31-27 42" stroke-width="4" />
+                    <path class="potato-root" pathLength="1" d="M253 292c38 5 63 27 81 61 8 15 17 25 31 32" stroke-width="4.5" />
+                    <path class="potato-root" pathLength="1" d="M238 330c-23 3-40 14-52 34" stroke-width="3" />
+                    <path class="potato-root" pathLength="1" d="M281 315c25 2 43 15 56 36" stroke-width="3" />
+                  </g>
+                  <g class="potato-tuber potato-tuber-one" fill="var(--potato-skin)" stroke="var(--potato-outline)" stroke-width="3">
+                    <path d="M164 314c5-27 28-43 54-39 30 4 46 28 38 55-8 28-36 43-62 34-22-7-35-27-30-50Z" />
+                    <circle cx="193" cy="302" r="3.3" fill="var(--potato-eye)" stroke="none" />
+                    <circle cx="227" cy="324" r="3" fill="var(--potato-eye)" stroke="none" />
+                    <path d="M187 339c8 5 17 5 24 0" fill="none" stroke-linecap="round" />
+                  </g>
+                  <g class="potato-tuber potato-tuber-two" fill="var(--potato-skin)" stroke="var(--potato-outline)" stroke-width="3">
+                    <path d="M294 335c4-21 23-34 43-31 23 3 36 21 30 42-6 22-27 33-47 27-18-5-30-21-26-38Z" />
+                    <circle cx="322" cy="331" r="2.8" fill="var(--potato-eye)" stroke="none" />
+                    <circle cx="345" cy="349" r="2.6" fill="var(--potato-eye)" stroke="none" />
+                  </g>
+                  <g class="potato-sprout" fill="none" stroke="var(--plant-stem)" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M260 226c0-38-2-72 7-110" stroke-width="9" />
+                    <path d="M263 167c-25-28-52-34-78-25 8 28 32 43 77 41" fill="var(--plant-leaf)" stroke-width="4" />
+                    <path d="M265 139c21-32 47-42 75-36-4 30-26 48-74 52" fill="var(--plant-leaf-light)" stroke-width="4" />
+                    <path d="M268 115c-7-28 2-49 22-64 17 23 13 47-17 72" fill="var(--plant-leaf)" stroke-width="4" />
+                    <path d="M259 190c-19-17-37-19-54-10 8 20 26 28 54 24" fill="var(--plant-leaf-light)" stroke-width="4" />
+                    <path d="M265 174c19-17 39-20 59-11-7 22-27 31-58 26" fill="var(--plant-leaf)" stroke-width="4" />
+                  </g>
+                  <path d="M0 224c81-16 139 9 220-5 90-16 163-4 300 5" fill="none" stroke="var(--soil-line)" stroke-width="8" stroke-linecap="round" />
+                  <g fill="var(--soil-speck)" opacity="0.55">
+                    <circle cx="82" cy="285" r="4" /><circle cx="126" cy="348" r="3" />
+                    <circle cx="402" cy="292" r="4" /><circle cx="446" cy="366" r="3" />
+                    <circle cx="94" cy="393" r="2.5" /><circle cx="392" cy="395" r="2.5" />
+                  </g>
+                </svg>
+                <p class="plant-caption" id="plant-caption">
+                  Le prime radici aspettano di crescere.
+                </p>
+              </div>
+
+              <div class="timer-console">
+                <p class="timer-session" id="timer-session">Sessione 1 di 4</p>
+                <time
+                  class="timer-countdown"
+                  id="timer-countdown"
+                  datetime="PT25M"
+                  aria-label="25 minuti rimanenti"
+                  >25:00</time
+                >
+                <p class="timer-status" id="timer-status">
+                  Quando vuoi, avvia la prima sessione.
+                </p>
+                <div
+                  class="timer-progress-track"
+                  id="timer-progress"
+                  role="progressbar"
+                  aria-label="Avanzamento della fase"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                  aria-valuenow="0"
+                >
+                  <span></span>
+                </div>
+                <ol
+                  class="session-steps"
+                  id="session-steps"
+                  aria-label="Avanzamento delle sessioni"
+                ></ol>
+                <div class="timer-controls">
+                  <button
+                    class="button button-primary timer-start"
+                    id="timer-start"
+                    type="button"
+                  >
+                    <svg><use href="#icon-play" /></svg>
+                    <span>Avvia</span>
+                  </button>
+                  <button
+                    class="button button-quiet"
+                    id="timer-skip"
+                    type="button"
+                  >
+                    <svg><use href="#icon-skip" /></svg>Salta fase
+                  </button>
+                  <button
+                    class="button button-quiet"
+                    id="timer-reset"
+                    type="button"
+                  >
+                    <svg><use href="#icon-refresh" /></svg>Ricomincia
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside class="pomodoro-sidebar">
+            <form
+              class="panel pomodoro-settings"
+              id="pomodoro-settings"
+              novalidate
+              aria-labelledby="pomodoro-settings-title"
+            >
+              <div class="panel-header compact">
+                <div>
+                  <p class="section-kicker">Il tuo ritmo</p>
+                  <h2 id="pomodoro-settings-title">Impostazioni</h2>
+                </div>
+              </div>
+
+              <div class="pomodoro-form-grid">
+                <div class="field">
+                  <label for="pomodoro-sessions">Numero di sessioni</label>
+                  <input
+                    id="pomodoro-sessions"
+                    name="sessions"
+                    type="number"
+                    min="1"
+                    max="24"
+                    inputmode="numeric"
+                    required
+                  />
+                </div>
+                <div class="field">
+                  <label for="pomodoro-focus">Durata sessione</label>
+                  <div class="input-with-unit">
+                    <input
+                      id="pomodoro-focus"
+                      name="focusMinutes"
+                      type="number"
+                      min="1"
+                      max="180"
+                      inputmode="numeric"
+                      required
+                    />
+                    <span>min</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="pomodoro-break">Durata pausa</label>
+                  <div class="input-with-unit">
+                    <input
+                      id="pomodoro-break"
+                      name="shortBreakMinutes"
+                      type="number"
+                      min="1"
+                      max="90"
+                      inputmode="numeric"
+                      required
+                    />
+                    <span>min</span>
+                  </div>
+                </div>
+              </div>
+
+              <label class="long-break-toggle">
+                <span>
+                  <strong>Inserisci pause pi&ugrave; lunghe</strong>
+                  <small>Una pausa rigenerante dopo alcune sessioni.</small>
+                </span>
+                <input id="long-break-enabled" name="longBreakEnabled" type="checkbox" />
+                <span class="toggle" aria-hidden="true"></span>
+              </label>
+
+              <div class="pomodoro-form-grid long-break-fields" id="long-break-fields">
+                <div class="field">
+                  <label for="long-break-every">Ogni quante sessioni</label>
+                  <input
+                    id="long-break-every"
+                    name="longBreakEvery"
+                    type="number"
+                    min="2"
+                    max="12"
+                    inputmode="numeric"
+                    required
+                  />
+                </div>
+                <div class="field">
+                  <label for="long-break-duration">Durata pausa lunga</label>
+                  <div class="input-with-unit">
+                    <input
+                      id="long-break-duration"
+                      name="longBreakMinutes"
+                      type="number"
+                      min="1"
+                      max="120"
+                      inputmode="numeric"
+                      required
+                    />
+                    <span>min</span>
+                  </div>
+                </div>
+              </div>
+
+              <p class="form-error" id="pomodoro-form-error" role="alert"></p>
+              <button class="button button-primary" type="submit">
+                Applica e ricomincia
+              </button>
+              <p class="field-help">
+                Le impostazioni e il timer vengono salvati solo su questo dispositivo.
+              </p>
+            </form>
+
+            <section class="panel cycle-summary" aria-labelledby="cycle-summary-title">
+              <p class="section-kicker">Prossimi passi</p>
+              <h2 id="cycle-summary-title">Il ciclo</h2>
+              <ol id="cycle-preview"></ol>
+            </section>
+          </aside>
+        </div>
+        <p class="sr-only" id="pomodoro-announcer" aria-live="polite"></p>
+      </main>
+
       <footer class="footer">
         <span>Tato Tracker</span>
       </footer>
@@ -416,6 +693,9 @@
       >
       <a href="#goals-section"
         ><svg><use href="#icon-target" /></svg><span>Obiettivi</span></a
+      >
+      <a href="#pomodoro-view"
+        ><svg><use href="#icon-timer" /></svg><span>Pomodoro</span></a
       >
       <button type="button" data-open-goal>
         <svg><use href="#icon-plus" /></svg><span>Nuovo</span>

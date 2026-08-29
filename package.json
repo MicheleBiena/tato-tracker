@@ -5,7 +5,7 @@
   "description": "Planner di studio locale e rilassante, pronto per GitHub Pages.",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check planner.js && node --check app.js && npm test",
+    "check": "node --check planner.js && node --check app.js && node --check pomodoro-engine.js && node --check pomodoro.js && npm test",
     "test:browser": "node --preserve-symlinks-main tests/browser-smoke.mjs"
   }
 }

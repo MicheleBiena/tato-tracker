@@ -525,6 +525,219 @@ async function main() {
     assert.equal(theme.saved, theme.after, 'Il tema scelto non viene salvato.');
     assert.match(theme.label, theme.after === 'dark' ? /chiaro/i : /scuro/i);
 
+    await evaluate(pageCdp, `document.querySelector('.mobile-nav a[href="#pomodoro-view"]').click()`);
+    await waitForPage(
+      pageCdp,
+      `!document.querySelector('#pomodoro-view').hidden && document.querySelector('#main-content').hidden`,
+      'apertura della vista Pomodoro'
+    );
+    const pomodoroInitial = await evaluate(pageCdp, `(() => ({
+      hash: location.hash,
+      title: document.title,
+      rootPaths: document.querySelectorAll('#potato-plant .potato-root').length,
+      sprout: Boolean(document.querySelector('#potato-plant .potato-sprout')),
+      sessions: document.querySelector('#pomodoro-sessions').value,
+      focus: document.querySelector('#pomodoro-focus').value,
+      shortBreak: document.querySelector('#pomodoro-break').value,
+      longBreakEnabled: document.querySelector('#long-break-enabled').checked,
+      activeNav: document.querySelector('.mobile-nav a[href="#pomodoro-view"]').getAttribute('aria-current'),
+      stepCount: document.querySelectorAll('#session-steps li').length,
+      mobileNavItems: document.querySelectorAll('.mobile-nav > a, .mobile-nav > button').length,
+      plantWidth: document.querySelector('#potato-plant').getBoundingClientRect().width,
+      controlHeights: [
+        '#timer-start',
+        '#timer-skip',
+        '#timer-reset',
+        '#pomodoro-sessions',
+        '#pomodoro-focus',
+        '#pomodoro-break'
+      ].map((selector) => document.querySelector(selector).getBoundingClientRect().height)
+    }))()`);
+    assert.equal(pomodoroInitial.hash, '#pomodoro-view');
+    assert.match(pomodoroInitial.title, /25:00.*Concentrazione.*Tato Tracker/);
+    assert.equal(pomodoroInitial.rootPaths, 5, 'L\'illustrazione SVG non contiene le radici previste.');
+    assert.equal(pomodoroInitial.sprout, true, 'L\'illustrazione SVG non contiene il germoglio.');
+    assert.deepEqual(
+      [pomodoroInitial.sessions, pomodoroInitial.focus, pomodoroInitial.shortBreak],
+      ['4', '25', '5']
+    );
+    assert.equal(pomodoroInitial.longBreakEnabled, true);
+    assert.equal(pomodoroInitial.activeNav, 'page');
+    assert.equal(pomodoroInitial.stepCount, 4);
+    assert.equal(pomodoroInitial.mobileNavItems, 5, 'La navigazione mobile non contiene le cinque destinazioni previste.');
+    assert.ok(pomodoroInitial.plantWidth <= VIEWPORT.width, 'L\'illustrazione Pomodoro supera la viewport mobile.');
+    assert.ok(pomodoroInitial.controlHeights.every((height) => height >= 44), 'Un controllo Pomodoro e piu basso di 44px.');
+    assertNoHorizontalOverflow(await mobileLayoutSnapshot(pageCdp), 'Vista Pomodoro mobile');
+
+    await pageCdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 320,
+      height: VIEWPORT.height,
+      screenWidth: 320,
+      screenHeight: VIEWPORT.height,
+      deviceScaleFactor: 1,
+      mobile: true
+    });
+    const compactPomodoro = await mobileLayoutSnapshot(pageCdp);
+    assert.equal(compactPomodoro.innerWidth, 320, 'La vista compatta non usa una viewport da 320px.');
+    assert.ok(compactPomodoro.scrollWidth <= 320, `Il Pomodoro ha overflow a 320px (${compactPomodoro.scrollWidth}px).`);
+    assert.ok(
+      await evaluate(pageCdp, `document.querySelector('#potato-plant').getBoundingClientRect().width <= 320`),
+      'L\'SVG supera la viewport da 320px.'
+    );
+    await pageCdp.send('Emulation.setDeviceMetricsOverride', {
+      width: 812,
+      height: 375,
+      screenWidth: 812,
+      screenHeight: 375,
+      deviceScaleFactor: 1,
+      mobile: true
+    });
+    const landscapePomodoro = await mobileLayoutSnapshot(pageCdp);
+    assert.equal(landscapePomodoro.innerWidth, 812);
+    assert.ok(landscapePomodoro.scrollWidth <= 812, `Il Pomodoro ha overflow in landscape (${landscapePomodoro.scrollWidth}px).`);
+    assert.equal(
+      await evaluate(pageCdp, `getComputedStyle(document.querySelector('.desktop-nav')).display !== 'none'`),
+      true,
+      'La navigazione Pomodoro scompare nella fascia tablet/landscape.'
+    );
+    await pageCdp.send('Emulation.setDeviceMetricsOverride', {
+      width: VIEWPORT.width,
+      height: VIEWPORT.height,
+      screenWidth: VIEWPORT.width,
+      screenHeight: VIEWPORT.height,
+      deviceScaleFactor: 1,
+      mobile: true
+    });
+
+    const longBreakToggle = await evaluate(pageCdp, `(() => {
+      const toggle = document.querySelector('#long-break-enabled');
+      toggle.click();
+      const disabled = [...document.querySelectorAll('#long-break-fields input')].every((input) => input.disabled);
+      const hidden = document.querySelector('#long-break-fields').hidden;
+      toggle.click();
+      return { disabled, hidden, restored: toggle.checked };
+    })()`);
+    assert.deepEqual(longBreakToggle, { disabled: true, hidden: true, restored: true });
+
+    await evaluate(pageCdp, `(() => {
+      const values = {
+        '#pomodoro-sessions': '3',
+        '#pomodoro-focus': '1',
+        '#pomodoro-break': '2',
+        '#long-break-every': '2',
+        '#long-break-duration': '7'
+      };
+      for (const [selector, value] of Object.entries(values)) {
+        document.querySelector(selector).value = value;
+      }
+      document.querySelector('#pomodoro-settings').requestSubmit();
+    })()`);
+    await waitForPage(
+      pageCdp,
+      `JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer?.config?.sessions === 3`,
+      'salvataggio impostazioni Pomodoro'
+    );
+    const configuredPomodoro = await evaluate(pageCdp, `(() => {
+      const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null');
+      return {
+        config: saved?.timer?.config,
+        phase: saved?.timer?.phase,
+        remaining: saved?.timer?.remainingSeconds,
+        stepCount: document.querySelectorAll('#session-steps li').length,
+        preview: document.querySelector('#cycle-preview').textContent.replace(/\\s+/g, ' ').trim()
+      };
+    })()`);
+    assert.deepEqual(configuredPomodoro.config, {
+      sessions: 3,
+      focusMinutes: 1,
+      shortBreakMinutes: 2,
+      longBreakEnabled: true,
+      longBreakEvery: 2,
+      longBreakMinutes: 7
+    });
+    assert.equal(configuredPomodoro.phase, 'focus');
+    assert.equal(configuredPomodoro.remaining, 60);
+    assert.equal(configuredPomodoro.stepCount, 3);
+    assert.match(configuredPomodoro.preview, /3.*Sessioni di concentrazione.*1 min ciascuna/);
+    assert.match(configuredPomodoro.preview, /Pausa lunga da 7 min ogni 2 sessioni/);
+
+    await evaluate(pageCdp, `document.querySelector('#timer-start').click()`);
+    await waitForPage(
+      pageCdp,
+      `JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer?.running === true`,
+      'avvio timer Pomodoro'
+    );
+    await delay(1_100);
+    await evaluate(pageCdp, `document.querySelector('#timer-start').click()`);
+    const pausedPomodoro = await evaluate(pageCdp, `(() => {
+      const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer;
+      return {
+        running: saved?.running,
+        remaining: saved?.remainingSeconds,
+        label: document.querySelector('#timer-start span').textContent.trim()
+      };
+    })()`);
+    assert.equal(pausedPomodoro.running, false);
+    assert.ok(pausedPomodoro.remaining >= 58 && pausedPomodoro.remaining <= 59, 'La pausa non conserva il tempo rimanente.');
+    assert.equal(pausedPomodoro.label, 'Riprendi');
+
+    const quickPhaseScript = await pageCdp.send('Page.addScriptToEvaluateOnNewDocument', {
+      source: `(() => {
+        try {
+          const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'));
+          saved.timer.phase = 'focus';
+          saved.timer.session = 1;
+          saved.timer.completedSessions = 0;
+          saved.timer.remainingSeconds = 1;
+          saved.timer.totalSeconds = 60;
+          saved.timer.running = true;
+          saved.timer.endsAt = Date.now() + 250;
+          localStorage.setItem('tato-tracker-pomodoro-v1', JSON.stringify(saved));
+        } catch (_) {}
+      })();`
+    });
+    const pomodoroReload = pageCdp.once('Page.loadEventFired');
+    await pageCdp.send('Page.reload', { ignoreCache: true });
+    await pomodoroReload;
+    await pageCdp.send('Page.removeScriptToEvaluateOnNewDocument', {
+      identifier: quickPhaseScript.identifier
+    });
+    await waitForPage(
+      pageCdp,
+      `JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1') || 'null')?.timer?.phase === 'shortBreak'`,
+      'avanzamento Pomodoro dopo reload'
+    );
+    const restoredPomodoro = await evaluate(pageCdp, `(() => {
+      const saved = JSON.parse(localStorage.getItem('tato-tracker-pomodoro-v1'))?.timer;
+      return {
+        viewVisible: !document.querySelector('#pomodoro-view').hidden,
+        phase: saved?.phase,
+        running: saved?.running,
+        completed: saved?.completedSessions,
+        rootGrowth: Number(document.querySelector('#potato-plant').style.getPropertyValue('--root-growth')),
+        phaseText: document.querySelector('#timer-phase').textContent.trim()
+      };
+    })()`);
+    assert.equal(restoredPomodoro.viewVisible, true, 'Il reload non conserva la vista Pomodoro.');
+    assert.equal(restoredPomodoro.phase, 'shortBreak');
+    assert.equal(restoredPomodoro.running, true);
+    assert.equal(restoredPomodoro.completed, 1);
+    assert.ok(restoredPomodoro.rootGrowth > 0, 'Le radici SVG non crescono dopo una sessione.');
+    assert.equal(restoredPomodoro.phaseText, 'Pausa breve');
+    await evaluate(pageCdp, `document.querySelector('#timer-start').click()`);
+
+    await evaluate(pageCdp, `document.querySelector('.mobile-nav a[href="#today-section"]').click()`);
+    await waitForPage(
+      pageCdp,
+      `!document.querySelector('#main-content').hidden && document.querySelector('#pomodoro-view').hidden`,
+      'ritorno al planner dal Pomodoro'
+    );
+    assert.equal(
+      await evaluate(pageCdp, `location.hash`),
+      '#today-section',
+      'La navigazione non torna alla vista planner.'
+    );
+
     const opened = await evaluate(pageCdp, `(() => {
       const button = [...document.querySelectorAll('[data-open-goal]')].find((node) => {
         const style = getComputedStyle(node);
@@ -883,6 +1096,7 @@ async function main() {
     console.log(`  viewport ${mobileLayout.innerWidth}x${mobileLayout.innerHeight}, scrollWidth ${mobileLayout.scrollWidth}`);
     console.log(`  demo ${dashboard.goalCards} obiettivi, tema ${theme.before} -> ${theme.after}`);
     console.log('  calendario 6x7 verificato su mese corrente, successivo e precedente');
+    console.log('  Pomodoro configurabile, persistente e SVG progressivo verificato');
     console.log('  modale, obiettivi weekly/specific, export/import/reset e recupero localStorage verificati');
   } catch (error) {
     const exitDetail = browserExit

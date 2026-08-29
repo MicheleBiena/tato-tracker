@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 420" role="img" aria-labelledby="title description" style="--root-growth:1;--sprout-growth:1">
+  <title id="title">Pianta di patate di Tato Tracker</title>
+  <desc id="description">Una pianta verde emerge dalla terra sopra radici e patate.</desc>
+  <style>
+    @media (prefers-reduced-motion: reduce) {
+      [style] { transition: none !important; }
+    }
+  </style>
+    <rect width="520" height="420" rx="38" fill="var(--plant-sky, #e6efe9)" />
+    <circle cx="418" cy="74" r="31" fill="var(--plant-sun, #f5e7c9)" opacity="0.9" />
+    <path d="M0 224C81 208 139 233 220 219c90-16 163-4 300 5v196H0Z" fill="var(--soil-back, #b98358)" />
+    <path d="M0 260c78-18 142 10 220-5 100-19 196-4 300 10v155H0Z" fill="var(--soil-front, #946647)" opacity="0.5" />
+
+    <g fill="none" stroke="var(--root-color, #f4dcc0)" stroke-linecap="round" stroke-linejoin="round">
+      <path pathLength="1" d="M260 218c-5 43 4 78-11 118-6 18-17 35-31 49" stroke-width="7" style="stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--root-growth, 0));transition:stroke-dashoffset .75s ease-out" />
+      <path pathLength="1" d="M257 266c-33 6-55 26-70 54-8 15-13 31-27 42" stroke-width="4" style="stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--root-growth, 0));transition:stroke-dashoffset .75s ease-out" />
+      <path pathLength="1" d="M253 292c38 5 63 27 81 61 8 15 17 25 31 32" stroke-width="4.5" style="stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--root-growth, 0));transition:stroke-dashoffset .75s ease-out" />
+      <path pathLength="1" d="M238 330c-23 3-40 14-52 34" stroke-width="3" style="stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--root-growth, 0));transition:stroke-dashoffset .75s ease-out" />
+      <path pathLength="1" d="M281 315c25 2 43 15 56 36" stroke-width="3" style="stroke-dasharray:1;stroke-dashoffset:calc(1 - var(--root-growth, 0));transition:stroke-dashoffset .75s ease-out" />
+    </g>
+
+    <g fill="var(--potato-skin, #d9a15f)" stroke="var(--potato-outline, #8a5b35)" stroke-width="3" style="opacity:clamp(0,calc((var(--root-growth, 0) - .18) * 3),1);transform:scale(calc(.72 + var(--root-growth, 0) * .28));transform-origin:212px 322px;transition:opacity .35s ease-out,transform .55s ease-out">
+      <path d="M164 314c5-27 28-43 54-39 30 4 46 28 38 55-8 28-36 43-62 34-22-7-35-27-30-50Z" />
+      <circle cx="193" cy="302" r="3.3" fill="var(--potato-eye, #8a5b35)" stroke="none" />
+      <circle cx="227" cy="324" r="3" fill="var(--potato-eye, #8a5b35)" stroke="none" />
+      <path d="M187 339c8 5 17 5 24 0" fill="none" stroke-linecap="round" />
+    </g>
+    <g fill="var(--potato-skin, #d9a15f)" stroke="var(--potato-outline, #8a5b35)" stroke-width="3" style="opacity:clamp(0,calc((var(--root-growth, 0) - .45) * 3),1);transform:scale(calc(.72 + var(--root-growth, 0) * .28));transform-origin:330px 344px;transition:opacity .35s ease-out,transform .55s ease-out">
+      <path d="M294 335c4-21 23-34 43-31 23 3 36 21 30 42-6 22-27 33-47 27-18-5-30-21-26-38Z" />
+      <circle cx="322" cy="331" r="2.8" fill="var(--potato-eye, #8a5b35)" stroke="none" />
+      <circle cx="345" cy="349" r="2.6" fill="var(--potato-eye, #8a5b35)" stroke="none" />
+    </g>
+
+    <g fill="none" stroke="var(--plant-stem, #416f59)" stroke-linecap="round" stroke-linejoin="round" style="opacity:var(--sprout-growth, 0);transform:translateY(calc((1 - var(--sprout-growth, 0)) * 46px)) scaleY(calc(.2 + var(--sprout-growth, 0) * .8));transform-origin:260px 226px;transition:opacity .35s ease-out,transform .75s cubic-bezier(.22,1,.36,1)">
+      <path d="M260 226c0-38-2-72 7-110" stroke-width="9" />
+      <path d="M263 167c-25-28-52-34-78-25 8 28 32 43 77 41" fill="var(--plant-leaf, #5e8c72)" stroke-width="4" />
+      <path d="M265 139c21-32 47-42 75-36-4 30-26 48-74 52" fill="var(--plant-leaf-light, #79a88a)" stroke-width="4" />
+      <path d="M268 115c-7-28 2-49 22-64 17 23 13 47-17 72" fill="var(--plant-leaf, #5e8c72)" stroke-width="4" />
+      <path d="M259 190c-19-17-37-19-54-10 8 20 26 28 54 24" fill="var(--plant-leaf-light, #79a88a)" stroke-width="4" />
+      <path d="M265 174c19-17 39-20 59-11-7 22-27 31-58 26" fill="var(--plant-leaf, #5e8c72)" stroke-width="4" />
+    </g>
+
+    <path d="M0 224c81-16 139 9 220-5 90-16 163-4 300 5" fill="none" stroke="var(--soil-line, #795038)" stroke-width="8" stroke-linecap="round" />
+    <g fill="var(--soil-speck, #795038)" opacity="0.55">
+      <circle cx="82" cy="285" r="4" /><circle cx="126" cy="348" r="3" />
+      <circle cx="402" cy="292" r="4" /><circle cx="446" cy="366" r="3" />
+      <circle cx="94" cy="393" r="2.5" /><circle cx="392" cy="395" r="2.5" />
+    </g>
+</svg>

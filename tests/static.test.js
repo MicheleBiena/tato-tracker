@@ -7,6 +7,7 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const potatoSvg = fs.readFileSync(path.join(root, 'potato-plant.svg'), 'utf8');
 
 test('document includes the core accessibility landmarks', () => {
   assert.match(html, /<html\s+lang="it"/i);
@@ -25,7 +26,7 @@ test('static ids are unique', () => {
 test('all local static assets referenced by the page exist', () => {
   const references = Array.from(html.matchAll(/(?:src|href)="([^"#][^"]*)"/g), (match) => match[1])
     .filter((reference) => !reference.includes('://'));
-  const missing = references.filter((reference) => !fs.existsSync(path.join(root, reference.split('?')[0])));
+  const missing = references.filter((reference) => !fs.existsSync(path.join(root, reference.split(/[?#]/)[0])));
   assert.deepEqual(missing, []);
 });
 
@@ -43,4 +44,18 @@ test('goal form exposes weekly and specific-date scheduling modes', () => {
   assert.match(html, /name="scheduleMode"\s+value="weekly"/);
   assert.match(html, /name="scheduleMode"\s+value="specific"/);
   assert.match(html, /id="specific-date-picker"[^>]+role="group"/);
+});
+
+test('Pomodoro view exposes timer controls, labelled settings and an SVG plant', () => {
+  assert.match(html, /<main[^>]+id="pomodoro-view"[^>]+aria-labelledby="pomodoro-title"/s);
+  assert.match(html, /id="timer-countdown"[^>]+aria-label="[^"]+"/s);
+  assert.match(html, /id="pomodoro-settings"[^>]+aria-labelledby="pomodoro-settings-title"/s);
+  assert.match(html, /for="pomodoro-sessions"/);
+  assert.match(html, /for="pomodoro-focus"/);
+  assert.match(html, /for="pomodoro-break"/);
+  assert.match(html, /class="potato-root"/);
+  assert.match(html, /class="potato-sprout"/);
+  assert.ok(fs.existsSync(path.join(root, 'potato-plant.svg')));
+  assert.match(potatoSvg, /<svg[^>]+viewBox="0 0 520 420"/);
+  assert.match(potatoSvg, /aria-labelledby="title description"/);
 });
