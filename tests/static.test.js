@@ -8,6 +8,7 @@ const path = require('node:path');
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const potatoSvg = fs.readFileSync(path.join(root, 'potato-plant.svg'), 'utf8');
+const appScript = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const pomodoroScript = fs.readFileSync(path.join(root, 'pomodoro.js'), 'utf8');
 const studyLogScript = fs.readFileSync(path.join(root, 'study-log.js'), 'utf8');
 const styles = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
@@ -106,6 +107,13 @@ test('Pomodoro copy is technical and keeps the requested completion phrase', () 
 test('Pomodoro schedules updates on real second boundaries', () => {
   assert.doesNotMatch(pomodoroScript, /setInterval\s*\(/);
   assert.match(pomodoroScript, /millisecondsUntilNextTick/);
+});
+
+test('goal cards expose a computed percentage without changing persisted data', () => {
+  assert.match(appScript, /const rounded = Math\.round\(stats\.completionPercent\)/);
+  assert.match(appScript, /class="goal-card-percent"[^>]*>\$\{rounded\}%/);
+  assert.match(appScript, /class="goal-card-progress" role="progressbar"[\s\S]*?aria-valuenow="\$\{rounded\}"/);
+  assert.doesNotMatch(appScript, /goal\.completionPercent\s*=/);
 });
 
 test('Pomodoro alert and looping alarm cover every natural phase completion', () => {

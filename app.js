@@ -887,15 +887,21 @@
       })
       .map((goal) => {
         const stats = Planner.goalStats(goal);
+        const rounded = Math.round(stats.completionPercent);
+        const completed = Math.min(stats.completedPages, stats.totalPages);
         const due = shortDateFormatter.format(
           Planner.parseDateKey(goal.endDate),
         );
         const status = stats.isComplete
-          ? "Completato"
-          : `${Math.round(stats.completionPercent)}% · scade ${due}${stats.unscheduled ? ` · ${stats.unscheduled} da collocare` : ""}${stats.overplanned ? ` · ${stats.overplanned} in eccesso` : ""}`;
+          ? `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · completato`
+          : `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · scade ${due}${stats.unscheduled ? ` · ${stats.unscheduled} da collocare` : ""}${stats.overplanned ? ` · ${stats.overplanned} in eccesso` : ""}`;
         return `<article class="goal-card" style="--task-color:${safeColor(goal.color)}">
           <span class="goal-color" aria-hidden="true"></span>
-          <div class="goal-copy"><strong>${escapeHtml(goal.title)}</strong><span>${escapeHtml(status)}</span></div>
+          <div class="goal-copy">
+            <div class="goal-copy-top"><strong>${escapeHtml(goal.title)}</strong><span class="goal-card-percent" aria-hidden="true">${rounded}%</span></div>
+            <div class="goal-card-progress" role="progressbar" aria-label="Completamento ${escapeHtml(goal.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rounded}" aria-valuetext="${rounded} percento, ${numberFormatter.format(completed)} pagine su ${numberFormatter.format(stats.totalPages)}"><span style="--progress:${rounded}%"></span></div>
+            <span class="goal-card-meta">${escapeHtml(status)}</span>
+          </div>
           <button class="goal-edit" type="button" data-edit-goal="${escapeHtml(goal.id)}" aria-label="Modifica ${escapeHtml(goal.title)}"><svg><use href="#icon-edit"></use></svg></button>
         </article>`;
       })

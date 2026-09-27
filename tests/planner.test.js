@@ -175,6 +175,17 @@ test('progress beyond the target is capped at 100 percent and reported as extra'
   assert.equal(stats.isComplete, true);
 });
 
+test('per-goal percentage supports legacy numeric progress without migrating saved data', () => {
+  const goal = futureRange(2, 10);
+  goal.progress[goal.startDate] = 3;
+  const before = JSON.stringify(goal);
+  const stats = Planner.goalStats(goal);
+
+  assert.equal(stats.completedPages, 3);
+  assert.equal(stats.completionPercent, 30);
+  assert.equal(JSON.stringify(goal), before);
+});
+
 test('rescheduleGoal preserves allocations before fromDate and logged-day history', () => {
   let goal = futureRange(4, 12);
   const dates = Object.keys(goal.allocations).sort();

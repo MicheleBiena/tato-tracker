@@ -1332,8 +1332,8 @@ main {
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 11px;
-  min-height: 64px;
-  padding: 9px 9px 9px 11px;
+  min-height: 78px;
+  padding: 10px 9px 10px 11px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface-raised);
@@ -1353,26 +1353,59 @@ main {
 }
 
 .goal-copy {
+  display: grid;
+  gap: 5px;
   min-width: 0;
 }
 
-.goal-copy strong,
-.goal-copy span {
-  display: block;
+.goal-copy-top {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.goal-copy-top strong {
+  min-width: 0;
   overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.83rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.goal-copy strong {
-  color: var(--text-strong);
-  font-size: 0.83rem;
+.goal-card-percent {
+  flex: 0 0 auto;
+  color: var(--task-color);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
 }
 
-.goal-copy span {
-  margin-top: 2px;
+.goal-card-progress {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.goal-card-progress > span {
+  display: block;
+  width: var(--progress, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--task-color);
+  transition: width 350ms var(--ease);
+}
+
+.goal-card-meta {
+  display: block;
+  overflow: hidden;
   color: var(--text-muted);
   font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .goal-edit {
@@ -3418,7 +3451,8 @@ main {
   .calendar-task::before,
   .legend-dot,
   .goal-color,
-  .progress-bar span {
+  .progress-bar span,
+  .goal-card-progress > span {
     border: 1px solid CanvasText;
   }
 

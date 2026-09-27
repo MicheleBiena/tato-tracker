@@ -442,6 +442,16 @@ async function main() {
         goalCards: document.querySelectorAll('.goal-card').length,
         todayTasks: document.querySelectorAll('.today-task').length,
         goalTitles: [...document.querySelectorAll('.goal-card .goal-copy strong')].map((node) => node.textContent.trim()),
+        goalProgress: [...document.querySelectorAll('.goal-card')].map((card) => {
+          const title = card.querySelector('.goal-copy strong').textContent.trim();
+          const goal = saved?.goals?.find((candidate) => candidate.title === title);
+          return {
+            title,
+            badge: card.querySelector('.goal-card-percent')?.textContent.trim(),
+            value: Number(card.querySelector('.goal-card-progress')?.getAttribute('aria-valuenow')),
+            expected: goal ? Math.round(TatoPlanner.goalStats(goal).completionPercent) : null
+          };
+        }),
         completion: document.querySelector('#metric-completion')?.textContent.trim(),
         saved
       };
@@ -454,6 +464,11 @@ async function main() {
     assert.equal(dashboard.saved?.settings?.sampleData, true, 'Lo stato demo non e stato salvato correttamente.');
     assert.ok(dashboard.saved?.goals?.length >= 3, 'Il salvataggio demo non contiene gli obiettivi previsti.');
     assert.notEqual(dashboard.completion, '0%', 'Il grafico di completamento demo non contiene progressi.');
+    assert.equal(dashboard.goalProgress.length, dashboard.goalCards, 'Manca il progresso su uno o piu obiettivi.');
+    dashboard.goalProgress.forEach((progress) => {
+      assert.equal(progress.value, progress.expected, `Percentuale errata per ${progress.title}.`);
+      assert.equal(progress.badge, `${progress.expected}%`, `Badge percentuale errato per ${progress.title}.`);
+    });
 
     const currentCalendar = await calendarSnapshot(pageCdp);
     assertCalendarSnapshot(currentCalendar, 'Mese corrente');
@@ -766,7 +781,7 @@ async function main() {
     assert.match(restoredPomodoro.dailyMessage, /tato-alizzato 1 min di studio.*Vai così/i);
     assert.equal(restoredPomodoro.dailySessions, '1 sessione completata');
     assert.equal(restoredPomodoro.calendarBadge, '1m');
-    assert.match(restoredPomodoro.calendarLabel, /Pomodoro: 1 min, 1 sessione completata/);
+    assert.match(restoredPomodoro.calendarLabel, /Po-Tato: 1 min, 1 sessione completata/);
     assert.equal(restoredPomodoro.noticeHidden, false, 'La notifica non appare alla fine della fase.');
     assert.equal(restoredPomodoro.noticeTitle, 'Sessione terminata');
     assert.equal(restoredPomodoro.noticeDetail, 'Pausa breve pronta.');
