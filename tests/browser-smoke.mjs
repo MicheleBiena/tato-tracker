@@ -470,6 +470,56 @@ async function main() {
       assert.equal(progress.badge, `${progress.expected}%`, `Badge percentuale errato per ${progress.title}.`);
     });
 
+    const focusedGoalProgress = await evaluate(pageCdp, `(() => {
+      const button = document.querySelector('[data-view-progress]');
+      const card = button.closest('.goal-card');
+      const title = card.querySelector('.goal-copy strong').textContent.trim();
+      const savedBefore = localStorage.getItem(${JSON.stringify(STORAGE_KEY)});
+      const goal = JSON.parse(savedBefore).goals.find((item) => item.id === button.dataset.viewProgress);
+      const stats = TatoPlanner.goalStats(goal);
+      button.click();
+      return {
+        title,
+        panelTitle: document.querySelector('#progress-title').textContent.trim(),
+        scope: document.querySelector('#progress-scope').textContent.trim(),
+        percent: document.querySelector('#donut-percent').textContent.trim(),
+        done: document.querySelector('#pages-done').textContent.trim(),
+        left: document.querySelector('#pages-left').textContent.trim(),
+        expectedPercent: Math.round(stats.completionPercent) + '%',
+        expectedDone: new Intl.NumberFormat('it-IT').format(Math.min(stats.completedPages, stats.totalPages)),
+        expectedLeft: new Intl.NumberFormat('it-IT').format(stats.remainingPages),
+        chartLabel: document.querySelector('#completion-chart').getAttribute('aria-label'),
+        pressed: button.getAttribute('aria-pressed'),
+        selected: card.classList.contains('is-selected'),
+        showAllHidden: document.querySelector('#progress-show-all').hidden,
+        storageUnchanged: savedBefore === localStorage.getItem(${JSON.stringify(STORAGE_KEY)})
+      };
+    })()`);
+    assert.equal(focusedGoalProgress.panelTitle, focusedGoalProgress.title);
+    assert.equal(focusedGoalProgress.scope, 'Obiettivo selezionato');
+    assert.equal(focusedGoalProgress.percent, focusedGoalProgress.expectedPercent);
+    assert.equal(focusedGoalProgress.done, focusedGoalProgress.expectedDone);
+    assert.equal(focusedGoalProgress.left, focusedGoalProgress.expectedLeft);
+    assert.match(focusedGoalProgress.chartLabel, new RegExp(`Completamento ${focusedGoalProgress.title}`));
+    assert.equal(focusedGoalProgress.pressed, 'true');
+    assert.equal(focusedGoalProgress.selected, true);
+    assert.equal(focusedGoalProgress.showAllHidden, false);
+    assert.equal(focusedGoalProgress.storageUnchanged, true, 'La selezione del grafico modifica i dati salvati.');
+
+    const globalProgress = await evaluate(pageCdp, `(() => {
+      document.querySelector('#progress-show-all').click();
+      return {
+        title: document.querySelector('#progress-title').textContent.trim(),
+        percent: document.querySelector('#donut-percent').textContent.trim(),
+        hidden: document.querySelector('#progress-show-all').hidden,
+        selectedCards: document.querySelectorAll('.goal-card.is-selected').length
+      };
+    })()`);
+    assert.equal(globalProgress.title, 'I tuoi progressi');
+    assert.equal(globalProgress.percent, dashboard.completion);
+    assert.equal(globalProgress.hidden, true);
+    assert.equal(globalProgress.selectedCards, 0);
+
     const currentCalendar = await calendarSnapshot(pageCdp);
     assertCalendarSnapshot(currentCalendar, 'Mese corrente');
 

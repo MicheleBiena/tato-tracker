@@ -110,9 +110,12 @@ test('Pomodoro schedules updates on real second boundaries', () => {
 });
 
 test('goal cards expose a computed percentage without changing persisted data', () => {
+  assert.match(html, /id="progress-show-all"[^>]+aria-controls="completion-chart"[^>]+hidden/s);
   assert.match(appScript, /const rounded = Math\.round\(stats\.completionPercent\)/);
   assert.match(appScript, /class="goal-card-percent"[^>]*>\$\{rounded\}%/);
   assert.match(appScript, /class="goal-card-progress" role="progressbar"[\s\S]*?aria-valuenow="\$\{rounded\}"/);
+  assert.match(appScript, /data-view-progress="\$\{escapeHtml\(goal\.id\)\}" aria-pressed="\$\{selected\}"/);
+  assert.match(appScript, /function selectProgressGoal\(goalId = ""\)/);
   assert.doesNotMatch(appScript, /goal\.completionPercent\s*=/);
 });
 

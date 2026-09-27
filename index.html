@@ -324,13 +324,23 @@
           <aside class="dashboard-aside">
             <section
               class="panel progress-panel"
+              id="progress-panel"
               aria-labelledby="progress-title"
             >
               <div class="panel-header compact">
                 <div>
-                  <p class="section-kicker">Panoramica</p>
+                  <p class="section-kicker" id="progress-scope" aria-live="polite">Panoramica</p>
                   <h2 id="progress-title">I tuoi progressi</h2>
                 </div>
+                <button
+                  class="button button-quiet progress-show-all"
+                  id="progress-show-all"
+                  type="button"
+                  aria-controls="completion-chart"
+                  hidden
+                >
+                  Tutti
+                </button>
               </div>
               <div class="donut-layout">
                 <div

@@ -1183,7 +1183,7 @@ main {
 }
 
 .donut-value {
-  stroke: var(--primary);
+  stroke: var(--progress-color, var(--primary));
   stroke-dasharray: 0 302;
   stroke-linecap: round;
   transition: stroke-dasharray 400ms var(--ease);
@@ -1235,7 +1235,7 @@ main {
   border-radius: 50%;
 }
 
-.legend-done { background: var(--primary); }
+.legend-done { background: var(--progress-color, var(--primary)); }
 .legend-left { background: var(--border-strong); }
 
 .progress-summary p,
@@ -1328,6 +1328,7 @@ main {
 
 .goal-card {
   --task-color: var(--primary);
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -1343,6 +1344,30 @@ main {
 .goal-card:hover {
   border-color: color-mix(in srgb, var(--task-color) 45%, var(--border));
   background: color-mix(in srgb, var(--task-color) 5%, var(--surface-raised));
+}
+
+.goal-card.is-selected {
+  border-color: var(--task-color);
+  background: color-mix(in srgb, var(--task-color) 10%, var(--surface-raised));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--task-color) 22%, transparent);
+}
+
+.goal-card.is-selected .goal-card-percent::before {
+  content: "Vista · ";
+}
+
+.goal-select {
+  position: absolute;
+  z-index: 1;
+  inset: 0 55px 0 0;
+  border: 0;
+  border-radius: 14px 8px 8px 14px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.goal-select:active {
+  background: color-mix(in srgb, var(--task-color) 8%, transparent);
 }
 
 .goal-color {
@@ -1409,6 +1434,8 @@ main {
 }
 
 .goal-edit {
+  position: relative;
+  z-index: 2;
   width: 44px;
   height: 44px;
   border: 0;
@@ -1416,6 +1443,22 @@ main {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
+}
+
+.progress-panel .panel-header > div {
+  min-width: 0;
+}
+
+#progress-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.progress-show-all {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding-inline: 14px;
 }
 
 .goal-edit:hover {
