@@ -49,11 +49,6 @@
     calendarGrid: $("#calendar-grid"),
     calendarMonth: $("#calendar-month"),
     goalsList: $("#goals-list"),
-    subjectProgress: $("#subject-progress"),
-    progressPanel: $("#progress-panel"),
-    progressScope: $("#progress-scope"),
-    progressTitle: $("#progress-title"),
-    progressShowAll: $("#progress-show-all"),
     goalDialog: $("#goal-dialog"),
     goalForm: $("#goal-form"),
     dayDialog: $("#day-dialog"),
@@ -70,7 +65,6 @@
   let calendarCursor = firstOfMonth(Planner.todayKey());
   let specificDateSelection = new Set();
   let specificSelectionInitialized = false;
-  let selectedProgressGoalId = "";
   let toastTimer = 0;
   let confirmResolver = null;
 
@@ -558,7 +552,6 @@
     renderMetrics();
     renderToday();
     renderCalendar();
-    renderProgress();
     renderGoals();
   }
 
@@ -790,65 +783,6 @@
     ).join("");
   }
 
-  function renderProgress() {
-    const selectedGoal = state.goals.find(
-      (goal) => goal.id === selectedProgressGoalId,
-    );
-    if (!selectedGoal) selectedProgressGoalId = "";
-    const selectedStats = selectedGoal && Planner.goalStats(selectedGoal);
-    const aggregate = selectedStats
-      ? {
-          total: selectedStats.totalPages,
-          done: Math.min(selectedStats.completedPages, selectedStats.totalPages),
-          remaining: selectedStats.remainingPages,
-        }
-      : aggregateStats();
-    const percent = aggregate.total
-      ? Math.round((aggregate.done / aggregate.total) * 100)
-      : 0;
-    elements.progressPanel.style.setProperty(
-      "--progress-color",
-      selectedGoal ? safeColor(selectedGoal.color) : "var(--primary)",
-    );
-    elements.progressPanel.classList.toggle("is-filtered", Boolean(selectedGoal));
-    elements.progressScope.textContent = selectedGoal
-      ? "Obiettivo selezionato"
-      : "Panoramica";
-    elements.progressTitle.textContent = selectedGoal
-      ? selectedGoal.title
-      : "I tuoi progressi";
-    elements.progressTitle.title = selectedGoal ? selectedGoal.title : "";
-    elements.progressShowAll.hidden = !selectedGoal;
-    const circumference = 2 * Math.PI * 48;
-    $("#donut-value").style.strokeDasharray =
-      `${(circumference * percent) / 100} ${circumference}`;
-    $("#donut-percent").textContent = `${percent}%`;
-    $("#pages-done").textContent = numberFormatter.format(aggregate.done);
-    $("#pages-left").textContent = numberFormatter.format(aggregate.remaining);
-    $("#completion-chart").setAttribute(
-      "aria-label",
-      `${selectedGoal ? `Completamento ${selectedGoal.title}` : "Completamento totale"}: ${percent} percento, ${aggregate.done} pagine fatte e ${aggregate.remaining} da fare`,
-    );
-
-    if (!state.goals.length) {
-      elements.subjectProgress.innerHTML =
-        '<p class="field-help">Il progresso per materia comparirà qui.</p>';
-      return;
-    }
-    elements.subjectProgress.innerHTML = state.goals
-      .slice()
-      .sort((a, b) => a.title.localeCompare(b.title, "it"))
-      .map((goal) => {
-        const stats = Planner.goalStats(goal);
-        const rounded = Math.round(stats.completionPercent);
-        return `<div class="subject-progress-item" style="--task-color:${safeColor(goal.color)}">
-          <div class="subject-progress-top"><span>${escapeHtml(goal.title)}</span><strong>${rounded}% · ${numberFormatter.format(Math.min(stats.completedPages, stats.totalPages))}/${numberFormatter.format(stats.totalPages)}</strong></div>
-          <div class="progress-bar" role="progressbar" aria-label="${escapeHtml(goal.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${rounded}"><span style="--progress:${rounded}%"></span></div>
-        </div>`;
-      })
-      .join("");
-  }
-
   function focusCalendarDate(dateKey) {
     requestAnimationFrame(() => {
       const days = $$(".calendar-day", elements.calendarGrid);
@@ -913,7 +847,6 @@
       .sort((a, b) => (a.endDate || "9999").localeCompare(b.endDate || "9999"))
       .map((goal) => {
         const stats = Planner.goalStats(goal);
-        const selected = goal.id === selectedProgressGoalId;
         const rounded = Math.round(stats.completionPercent);
         const completed = Math.min(stats.completedPages, stats.totalPages);
         const due = goal.endDate ? shortDateFormatter.format(Planner.parseDateKey(goal.endDate)) : "";
@@ -922,8 +855,7 @@
           : goal.scheduleMode === "limitless"
             ? `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · ${stats.remainingPages} rimanenti · limitless`
             : `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · scade ${due}${stats.unscheduled ? ` · ${stats.unscheduled} da collocare` : ""}${stats.overplanned ? ` · ${stats.overplanned} in eccesso` : ""}`;
-        return `<article class="goal-card ${selected ? "is-selected" : ""}" style="--task-color:${safeColor(goal.color)}">
-          <button class="goal-select" type="button" data-view-progress="${escapeHtml(goal.id)}" aria-pressed="${selected}" aria-label="${selected ? "Torna al completamento globale" : `Mostra il completamento di ${escapeHtml(goal.title)}`}"></button>
+        return `<article class="goal-card" style="--task-color:${safeColor(goal.color)}">
           <span class="goal-color" aria-hidden="true"></span>
           <div class="goal-copy">
             <div class="goal-copy-top"><strong>${escapeHtml(goal.title)}</strong><span class="goal-card-percent" aria-hidden="true">${rounded}%</span></div>
@@ -939,29 +871,6 @@
     elements.goalsList.innerHTML = renderList(active) || '<p class="field-help">Nessun obiettivo attivo.</p>';
     $("#completed-goals-list").innerHTML = renderList(completed) || '<p class="field-help">I tuoi traguardi completati appariranno qui.</p>';
     $("#completed-count").textContent = completed.length;
-  }
-
-  function selectProgressGoal(goalId = "") {
-    selectedProgressGoalId =
-      goalId && selectedProgressGoalId !== goalId ? goalId : "";
-    renderProgress();
-    $$('[data-view-progress]').forEach((button) => {
-      const selected = button.dataset.viewProgress === selectedProgressGoalId;
-      button.setAttribute("aria-pressed", String(selected));
-      button.setAttribute(
-        "aria-label",
-        selected
-          ? "Torna al completamento globale"
-          : `Mostra il completamento di ${button.closest(".goal-card")?.querySelector(".goal-copy strong")?.textContent || "questo obiettivo"}`,
-      );
-      button.closest(".goal-card")?.classList.toggle("is-selected", selected);
-    });
-    elements.progressPanel.scrollIntoView({
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "nearest",
-    });
   }
 
   function openGoalDialog(goalId = "") {
@@ -1583,10 +1492,6 @@
       const editButton = event.target.closest("[data-edit-goal]");
       if (editButton) openGoalDialog(editButton.dataset.editGoal);
 
-      const progressButton = event.target.closest("[data-view-progress]");
-      if (progressButton)
-        selectProgressGoal(progressButton.dataset.viewProgress);
-
       const closeButton = event.target.closest("[data-close-dialog]");
       if (closeButton) closeButton.closest("dialog")?.close();
 
@@ -1611,9 +1516,6 @@
     });
 
     elements.todayList.addEventListener("submit", handleTodaySubmit);
-    elements.progressShowAll.addEventListener("click", () =>
-      selectProgressGoal(),
-    );
     elements.goalForm.addEventListener("submit", handleGoalSubmit);
     elements.goalForm.addEventListener("change", (event) => {
       if (event.target.matches('input[name="scheduleMode"]')) {

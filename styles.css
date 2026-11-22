@@ -1346,30 +1346,6 @@ main {
   background: color-mix(in srgb, var(--task-color) 5%, var(--surface-raised));
 }
 
-.goal-card.is-selected {
-  border-color: var(--task-color);
-  background: color-mix(in srgb, var(--task-color) 10%, var(--surface-raised));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--task-color) 22%, transparent);
-}
-
-.goal-card.is-selected .goal-card-percent::before {
-  content: "Vista · ";
-}
-
-.goal-select {
-  position: absolute;
-  z-index: 1;
-  inset: 0 55px 0 0;
-  border: 0;
-  border-radius: 14px 8px 8px 14px;
-  background: transparent;
-  cursor: pointer;
-}
-
-.goal-select:active {
-  background: color-mix(in srgb, var(--task-color) 8%, transparent);
-}
-
 .goal-color {
   width: 9px;
   height: 38px;

@@ -21,11 +21,11 @@
         document.documentElement.dataset.theme = "light";
       }
     </script>
-    <link rel="stylesheet" href="styles.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=3" />
     <script src="planner.js?v=2" defer></script>
     <script src="pomodoro-engine.js" defer></script>
     <script src="study-log.js" defer></script>
-    <script src="app.js?v=2" defer></script>
+    <script src="app.js?v=3" defer></script>
     <script src="pomodoro.js" defer></script>
   </head>
   <body>
@@ -322,66 +322,6 @@
           </div>
 
           <aside class="dashboard-aside">
-            <section
-              class="panel progress-panel"
-              id="progress-panel"
-              aria-labelledby="progress-title"
-            >
-              <div class="panel-header compact">
-                <div>
-                  <p class="section-kicker" id="progress-scope" aria-live="polite">Panoramica</p>
-                  <h2 id="progress-title">I tuoi progressi</h2>
-                </div>
-                <button
-                  class="button button-quiet progress-show-all"
-                  id="progress-show-all"
-                  type="button"
-                  aria-controls="completion-chart"
-                  hidden
-                >
-                  Tutti
-                </button>
-              </div>
-              <div class="donut-layout">
-                <div
-                  class="donut"
-                  id="completion-chart"
-                  role="img"
-                  aria-label="Completamento totale: 0 percento"
-                >
-                  <svg viewBox="0 0 120 120" aria-hidden="true">
-                    <circle class="donut-track" cx="60" cy="60" r="48" />
-                    <circle
-                      class="donut-value"
-                      id="donut-value"
-                      cx="60"
-                      cy="60"
-                      r="48"
-                    />
-                  </svg>
-                  <div class="donut-label">
-                    <strong id="donut-percent">0%</strong
-                    ><span>completato</span>
-                  </div>
-                </div>
-                <div class="progress-summary">
-                  <div>
-                    <span class="legend-dot legend-done"></span>
-                    <p>Fatte<strong id="pages-done">0</strong></p>
-                  </div>
-                  <div>
-                    <span class="legend-dot legend-left"></span>
-                    <p>Da fare<strong id="pages-left">0</strong></p>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="subject-progress"
-                id="subject-progress"
-                aria-label="Progresso per materia"
-              ></div>
-            </section>
-
             <section
               class="panel goals-panel"
               id="goals-section"
