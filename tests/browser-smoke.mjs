@@ -976,6 +976,29 @@ async function main() {
     })()`);
     assert.deepEqual(savedGoal, { title: smokeGoalTitle, totalPages: 42, sampleData: false });
 
+    const limitlessTitle = `Browser limitless ${Date.now()}`;
+    await evaluate(pageCdp, `(() => {
+      document.querySelector('[data-open-goal]').click();
+      document.querySelector('#goal-title').value = ${JSON.stringify(limitlessTitle)};
+      document.querySelector('#goal-pages').value = '10';
+      document.querySelector('input[name="scheduleMode"][value="limitless"]').click();
+      document.querySelector('#goal-form').requestSubmit();
+    })()`);
+    await waitForPage(pageCdp, `!document.querySelector('#goal-dialog').open && [...document.querySelectorAll('#goals-list .goal-card')].some(node => node.textContent.includes(${JSON.stringify(limitlessTitle)}))`, 'creazione obiettivo limitless');
+    await evaluate(pageCdp, `(() => {
+      const saved = JSON.parse(localStorage.getItem(${JSON.stringify(STORAGE_KEY)}));
+      const goal = saved.goals.find(item => item.title === ${JSON.stringify(limitlessTitle)});
+      const form = document.querySelector('[data-progress-form][data-goal-id="' + goal.id + '"]');
+      form.querySelector('[name="done"]').value = '10';
+      form.requestSubmit();
+    })()`);
+    await waitForPage(pageCdp, `[...document.querySelectorAll('#completed-goals-list .goal-card')].some(node => node.textContent.includes(${JSON.stringify(limitlessTitle)}))`, 'completamento obiettivo limitless');
+    assert.equal(await evaluate(pageCdp, `[...document.querySelectorAll('#goals-list .goal-card')].some(node => node.textContent.includes(${JSON.stringify(limitlessTitle)}))`), false, 'Obiettivo completato ancora fra gli attivi.');
+    const limitlessReload = pageCdp.once('Page.loadEventFired');
+    await pageCdp.send('Page.reload');
+    await limitlessReload;
+    await waitForPage(pageCdp, `[...document.querySelectorAll('#completed-goals-list .goal-card')].some(node => node.textContent.includes(${JSON.stringify(limitlessTitle)}))`, 'persistenza obiettivo limitless completato');
+
     const specificGoalTitle = `Browser specific ${Date.now()}`;
     const specificSetup = await evaluate(pageCdp, `(() => {
       document.querySelector('[data-open-goal]').click();

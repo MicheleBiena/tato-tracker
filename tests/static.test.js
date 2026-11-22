@@ -79,7 +79,7 @@ test('Pomodoro view exposes timer controls, labelled settings and an SVG plant',
 test('shared study log loads before planner and Pomodoro interfaces', () => {
   const logScriptIndex = html.indexOf('src="study-log.js"');
   assert.ok(logScriptIndex > 0);
-  assert.ok(logScriptIndex < html.indexOf('src="app.js"'));
+  assert.ok(logScriptIndex < html.indexOf('src="app.js?v=2"'));
   assert.ok(logScriptIndex < html.indexOf('src="pomodoro.js"'));
   assert.match(studyLogScript, /tato-tracker-study-log-v1/);
 });
