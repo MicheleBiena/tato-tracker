@@ -3505,3 +3505,21 @@ main {
     border: 1px solid CanvasText;
   }
 }
+
+.completed-panel {
+  border-color: var(--primary);
+}
+
+.completed-count {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.day-task-fields label[hidden] { display: none; }

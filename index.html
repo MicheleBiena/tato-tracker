@@ -403,6 +403,10 @@
               </div>
               <div class="goals-list" id="goals-list"></div>
             </section>
+            <section class="panel goals-panel completed-panel" aria-labelledby="completed-goals-title">
+              <div class="panel-header compact"><div><p class="section-kicker">I tuoi traguardi</p><h2 id="completed-goals-title">Obiettivi completati</h2></div><span class="completed-count" id="completed-count">0</span></div>
+              <div class="goals-list" id="completed-goals-list"></div>
+            </section>
           </aside>
         </div>
 
@@ -956,7 +960,7 @@
               >
               <input id="goal-start" name="startDate" type="date" required />
             </div>
-            <div class="field">
+            <div class="field" id="goal-due-field">
               <label for="goal-due"
                 >Scadenza <span aria-hidden="true">*</span></label
               >
@@ -978,6 +982,10 @@
                   ><svg><use href="#icon-refresh" /></svg><b>Ogni settimana</b
                   ><small>Ripeti gli stessi giorni</small></span
                 >
+              </label>
+              <label>
+                <input type="radio" name="scheduleMode" value="limitless" />
+                <span><svg><use href="#icon-book" /></svg><b>Limitless</b><small>Senza scadenza, al tuo ritmo</small></span>
               </label>
               <label>
                 <input type="radio" name="scheduleMode" value="specific" />

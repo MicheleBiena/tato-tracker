@@ -139,7 +139,7 @@
       errors.push('startDate must be a valid YYYY-MM-DD date');
     }
 
-    if (!isDateKey(endDate)) {
+    if (config.scheduleMode !== 'limitless' && !isDateKey(endDate)) {
       errors.push('endDate must be a valid YYYY-MM-DD date');
     }
 
@@ -297,7 +297,8 @@
       color: config.color || null,
       totalPages: configTotal(config),
       startDate: configStart(config),
-      endDate: configEnd(config),
+      endDate: config.scheduleMode === 'limitless' ? null : configEnd(config),
+      scheduleMode: config.scheduleMode || 'weekly',
       restWeekdays: Array.from(new Set(configRestWeekdays(config))).sort(),
       dateRules: dateRules,
       allocations: allocations,
@@ -318,8 +319,8 @@
       throw new TypeError('Goal totalPages must be a positive integer');
     }
     parseDateKey(goal.startDate);
-    parseDateKey(goal.endDate);
-    if (goal.startDate > goal.endDate) {
+    if (goal.scheduleMode !== 'limitless') parseDateKey(goal.endDate);
+    if (goal.scheduleMode !== 'limitless' && goal.startDate > goal.endDate) {
       throw new RangeError('Goal startDate cannot be after endDate');
     }
   }
@@ -368,6 +369,12 @@
     var requestedFrom = options.fromDate == null ? todayKey() : toDateKey(options.fromDate);
     var fromDate = requestedFrom < goal.startDate ? goal.startDate : requestedFrom;
     var copy = cloneGoal(goal);
+    if (copy.scheduleMode === 'limitless') {
+      copy.allocations = {};
+      copy.unscheduled = 0;
+      copy.overplanned = 0;
+      return copy;
+    }
     var previousAllocations = cloneGoal(goal).allocations;
 
     Object.keys(copy.allocations).forEach(function removeAdjustableAllocation(date) {
@@ -451,6 +458,7 @@
 
     var copy = cloneGoal(goal);
     copy.progress[date] = { done: done };
+    if (copy.scheduleMode === 'limitless') return copy;
     options = options || {};
     var redistribute = options.redistribute == null ? copy.autoRedistribute !== false : options.redistribute;
     var fromDate = addDaysKey(date, 1);
@@ -535,7 +543,7 @@
       remaining: remaining,
       percent: percent,
       plannedRemaining: plannedRemaining,
-      unscheduled: Math.max(0, remaining - plannedRemaining),
+      unscheduled: goal.scheduleMode === 'limitless' ? 0 : Math.max(0, remaining - plannedRemaining),
       overplanned: Math.max(0, plannedRemaining - remaining),
       isComplete: completed >= goal.totalPages
     };

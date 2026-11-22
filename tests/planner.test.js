@@ -204,3 +204,17 @@ test('rescheduleGoal preserves allocations before fromDate and logged-day histor
 test('CommonJS export is also installed as the browser-style global API', () => {
   assert.equal(globalThis.TatoPlanner, Planner);
 });
+
+
+test('limitless goals retain daily progress without allocating pages or a deadline', () => {
+  const goal = Planner.createGoal({ title: 'Lettura', totalPages: 100, startDate: '2026-01-01', scheduleMode: 'limitless' });
+  assert.equal(goal.endDate, null);
+  assert.deepEqual(goal.allocations, {});
+  const first = Planner.recordProgress(goal, '2026-02-01', 30);
+  const second = Planner.recordProgress(first, '2027-02-01', 20, { redistribute: false });
+  const corrected = Planner.recordProgress(second, '2026-02-01', 40);
+  assert.equal(Planner.goalStats(corrected).remainingPages, 40);
+  assert.equal(Planner.goalStats(corrected).unscheduled, 0);
+  assert.deepEqual(corrected.allocations, {});
+  assert.equal(Planner.goalStats(Planner.recordProgress(corrected, '2027-02-02', 40)).isComplete, true);
+});

@@ -122,7 +122,7 @@
   }
 
   function dateInGoal(goal, dateKey) {
-    return dateKey >= goal.startDate && dateKey <= goal.endDate;
+    return dateKey >= goal.startDate && (goal.scheduleMode === "limitless" || dateKey <= goal.endDate);
   }
 
   function dateKeysInRange(startDate, endDate, maxDays = 731) {
@@ -288,7 +288,10 @@
 
   function setScheduleMode(mode, { seed = false } = {}) {
     const specific = mode === "specific";
-    $("#weekly-options").classList.toggle("hidden", specific);
+    const limitless = mode === "limitless";
+    $("#goal-due-field").classList.toggle("hidden", limitless);
+    $("#goal-due").required = !limitless;
+    $("#weekly-options").classList.toggle("hidden", specific || limitless);
     $("#specific-options").classList.toggle("hidden", !specific);
     if (specific) {
       if (seed) seedSpecificDatesFromWeekdays();
@@ -470,6 +473,7 @@
         ),
         autoRedistribute: goal.autoRedistribute !== false,
         scheduleMode:
+          goal.scheduleMode === "limitless" ? "limitless" :
           goal.scheduleMode === "specific" ||
           ((goal.restWeekdays ?? goal.freeWeekdays ?? []).length === 7 &&
             Object.values(goal.dateRules || {}).some(
@@ -588,8 +592,10 @@
     } else if (!todayTasks.length) {
       elements.heroSummary.textContent =
         "Oggi il piano è libero. Riposa oppure apri il calendario per anticipare un piccolo passo.";
+    } else if (done > 0 && planned === 0) {
+      elements.heroSummary.textContent = `Hai completato ${plural(done, "pagina", "pagine")} oggi. Continua al tuo ritmo.`;
     } else if (done > 0) {
-      elements.heroSummary.textContent = `Hai completato ${plural(done, "pagina", "pagine")} delle ${numberFormatter.format(planned)} previste oggi.`;
+      elements.heroSummary.textContent = `Hai completato ${plural(done, "pagina", "pagine")} oggi, con ${numberFormatter.format(planned)} pagine pianificate.`;
     } else {
       elements.heroSummary.textContent = `Oggi ci sono ${plural(planned, "pagina", "pagine")} distribuite in ${plural(todayTasks.length, "materia", "materie")}.`;
     }
@@ -613,19 +619,20 @@
     $("#metric-today").textContent = plural(todayPlanned, "pagina", "pagine");
     $("#metric-today-detail").textContent = todayPlanned
       ? `${numberFormatter.format(todayDone)} già completate`
-      : "Una giornata leggera";
+      : todayDone ? `${numberFormatter.format(todayDone)} completate al tuo ritmo` : "Una giornata leggera";
     $("#metric-completion").textContent = `${completion}%`;
     $("#metric-completion-detail").textContent =
       `${numberFormatter.format(aggregate.done)} di ${numberFormatter.format(aggregate.total)} pagine`;
 
     const nextGoal = state.goals
-      .filter((goal) => !Planner.goalStats(goal).isComplete)
+      .filter((goal) => !Planner.goalStats(goal).isComplete && goal.scheduleMode !== "limitless")
       .sort((a, b) => a.endDate.localeCompare(b.endDate))[0];
     if (!nextGoal) {
-      $("#metric-deadline").textContent = state.goals.length
+      const hasActive = state.goals.some((goal) => !Planner.goalStats(goal).isComplete);
+      $("#metric-deadline").textContent = hasActive ? "Nessuna" : state.goals.length
         ? "Tutto fatto"
         : "—";
-      $("#metric-deadline-detail").textContent = state.goals.length
+      $("#metric-deadline-detail").textContent = hasActive ? "Al tuo ritmo" : state.goals.length
         ? "Che bella sensazione"
         : "Aggiungi un obiettivo";
       return;
@@ -657,7 +664,7 @@
     elements.autoRedistribute.checked =
       state.settings.autoRedistribute !== false;
     const tasks = state.goals
-      .filter((goal) => getPlanned(goal, today) > 0 || getDone(goal, today) > 0)
+      .filter((goal) => getPlanned(goal, today) > 0 || getDone(goal, today) > 0 || (goal.scheduleMode === "limitless" && dateInGoal(goal, today) && !Planner.goalStats(goal).isComplete))
       .sort((a, b) => a.title.localeCompare(b.title, "it"));
 
     if (!state.goals.length) {
@@ -688,7 +695,7 @@
         return `<form class="today-task" data-progress-form data-goal-id="${escapeHtml(goal.id)}" style="--task-color:${safeColor(goal.color)}">
         <div class="today-task-info">
           <span class="today-task-badge" aria-hidden="true">${escapeHtml(goal.title.trim().charAt(0) || "T")}</span>
-          <div class="today-task-copy"><strong>${title}</strong><span>${plural(planned, "pagina prevista", "pagine previste")}${manual ? " · carico personalizzato" : ""}</span></div>
+          <div class="today-task-copy"><strong>${title}</strong><span>${goal.scheduleMode === "limitless" ? `${plural(Planner.goalStats(goal).remainingPages, "pagina rimanente", "pagine rimanenti")} · al tuo ritmo` : plural(planned, "pagina prevista", "pagine previste")}${manual ? " · carico personalizzato" : ""}</span></div>
         </div>
         <div class="today-checkin">
           <label for="done-${escapeHtml(goal.id)}">Pagine fatte</label>
@@ -743,7 +750,7 @@
           tasks
             .map(
               (goal) =>
-                `${goal.title}: ${getDone(goal, dateKey)} fatte su ${getPlanned(goal, dateKey)} previste`,
+                goal.scheduleMode === "limitless" ? `${goal.title}: ${getDone(goal, dateKey)} pagine fatte` : `${goal.title}: ${getDone(goal, dateKey)} fatte su ${getPlanned(goal, dateKey)} previste`,
             )
             .join("; "),
         );
@@ -765,7 +772,7 @@
         .map((goal) => {
           const planned = getPlanned(goal, dateKey);
           const done = getDone(goal, dateKey);
-          return `<span class="calendar-task ${done >= planned && planned > 0 ? "is-complete" : ""}" data-initial="${escapeHtml(goal.title.trim().charAt(0) || "T")}" style="--task-color:${safeColor(goal.color)}"><span class="calendar-task-name">${escapeHtml(goal.title)}</span><span class="calendar-task-pages">${done > 0 ? `${done}/` : ""}${planned}</span></span>`;
+          return `<span class="calendar-task ${done >= planned && planned > 0 ? "is-complete" : ""}" data-initial="${escapeHtml(goal.title.trim().charAt(0) || "T")}" style="--task-color:${safeColor(goal.color)}"><span class="calendar-task-name">${escapeHtml(goal.title)}</span><span class="calendar-task-pages">${goal.scheduleMode === "limitless" ? done : `${done > 0 ? `${done}/` : ""}${planned}`}</span></span>`;
         })
         .join("");
       const pomodoroBadge = pomodoroStudy.seconds
@@ -901,30 +908,20 @@
   }
 
   function renderGoals() {
-    if (!state.goals.length) {
-      elements.goalsList.innerHTML =
-        '<p class="field-help">Nessun obiettivo attivo.</p>';
-      return;
-    }
-    elements.goalsList.innerHTML = state.goals
+    const renderList = (goals) => goals
       .slice()
-      .sort((a, b) => {
-        const completeDelta =
-          Number(Planner.goalStats(a).isComplete) -
-          Number(Planner.goalStats(b).isComplete);
-        return completeDelta || a.endDate.localeCompare(b.endDate);
-      })
+      .sort((a, b) => (a.endDate || "9999").localeCompare(b.endDate || "9999"))
       .map((goal) => {
         const stats = Planner.goalStats(goal);
         const selected = goal.id === selectedProgressGoalId;
         const rounded = Math.round(stats.completionPercent);
         const completed = Math.min(stats.completedPages, stats.totalPages);
-        const due = shortDateFormatter.format(
-          Planner.parseDateKey(goal.endDate),
-        );
+        const due = goal.endDate ? shortDateFormatter.format(Planner.parseDateKey(goal.endDate)) : "";
         const status = stats.isComplete
           ? `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · completato`
-          : `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · scade ${due}${stats.unscheduled ? ` · ${stats.unscheduled} da collocare` : ""}${stats.overplanned ? ` · ${stats.overplanned} in eccesso` : ""}`;
+          : goal.scheduleMode === "limitless"
+            ? `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · ${stats.remainingPages} rimanenti · limitless`
+            : `${numberFormatter.format(completed)}/${numberFormatter.format(stats.totalPages)} pagine · scade ${due}${stats.unscheduled ? ` · ${stats.unscheduled} da collocare` : ""}${stats.overplanned ? ` · ${stats.overplanned} in eccesso` : ""}`;
         return `<article class="goal-card ${selected ? "is-selected" : ""}" style="--task-color:${safeColor(goal.color)}">
           <button class="goal-select" type="button" data-view-progress="${escapeHtml(goal.id)}" aria-pressed="${selected}" aria-label="${selected ? "Torna al completamento globale" : `Mostra il completamento di ${escapeHtml(goal.title)}`}"></button>
           <span class="goal-color" aria-hidden="true"></span>
@@ -937,13 +934,18 @@
         </article>`;
       })
       .join("");
+    const active = state.goals.filter((goal) => !Planner.goalStats(goal).isComplete);
+    const completed = state.goals.filter((goal) => Planner.goalStats(goal).isComplete);
+    elements.goalsList.innerHTML = renderList(active) || '<p class="field-help">Nessun obiettivo attivo.</p>';
+    $("#completed-goals-list").innerHTML = renderList(completed) || '<p class="field-help">I tuoi traguardi completati appariranno qui.</p>';
+    $("#completed-count").textContent = completed.length;
   }
 
   function selectProgressGoal(goalId = "") {
     selectedProgressGoalId =
       goalId && selectedProgressGoalId !== goalId ? goalId : "";
     renderProgress();
-    $$('[data-view-progress]', elements.goalsList).forEach((button) => {
+    $$('[data-view-progress]').forEach((button) => {
       const selected = button.dataset.viewProgress === selectedProgressGoalId;
       button.setAttribute("aria-pressed", String(selected));
       button.setAttribute(
@@ -983,9 +985,9 @@
       $("#goal-title").value = editingGoal.title;
       $("#goal-pages").value = editingGoal.totalPages;
       $("#goal-start").value = editingGoal.startDate;
-      $("#goal-due").value = editingGoal.endDate;
+      $("#goal-due").value = editingGoal.endDate || "";
       const storedMode =
-        editingGoal.scheduleMode === "specific" ? "specific" : "weekly";
+        editingGoal.scheduleMode === "limitless" ? "limitless" : editingGoal.scheduleMode === "specific" ? "specific" : "weekly";
       $$('input[name="studyDays"]', elements.goalForm).forEach((input) => {
         input.checked =
           storedMode === "specific"
@@ -1038,7 +1040,7 @@
         ? [0, 1, 2, 3, 4, 5, 6]
         : [0, 1, 2, 3, 4, 5, 6].filter((day) => !studyDays.includes(day));
     const startDate = String(formData.get("startDate") || "");
-    const endDate = String(formData.get("dueDate") || "");
+    const endDate = scheduleMode === "limitless" ? null : String(formData.get("dueDate") || "");
     const dateRules =
       scheduleMode === "specific"
         ? Object.fromEntries(
@@ -1073,13 +1075,13 @@
     } else if (!config.startDate) {
       message = "Scegli una data di inizio.";
       field = $("#goal-start");
-    } else if (!config.endDate) {
+    } else if (config.scheduleMode !== "limitless" && !config.endDate) {
       message = "Scegli una data di scadenza.";
       field = $("#goal-due");
     } else if (!$("#goal-id").value && config.startDate < Planner.todayKey()) {
       message = "Per un nuovo piano scegli oggi o una data futura come inizio.";
       field = $("#goal-start");
-    } else if (config.startDate > config.endDate) {
+    } else if (config.scheduleMode !== "limitless" && config.startDate > config.endDate) {
       message =
         "La scadenza deve essere uguale o successiva alla data di inizio.";
       field = $("#goal-due");
@@ -1128,7 +1130,7 @@
         const previous = state.goals.find((goal) => goal.id === goalId);
         if (!previous) throw new Error("Obiettivo non trovato");
         const inRange = (date) =>
-          date >= config.startDate && date <= config.endDate;
+          date >= config.startDate && (config.scheduleMode === "limitless" || date <= config.endDate);
         const progressDates = Object.keys(previous.progress || {});
         if (progressDates.some((date) => !inRange(date))) {
           $("#goal-form-error").textContent =
@@ -1145,7 +1147,7 @@
             (day, index) => day === config.restWeekdays[index],
           );
         const previousMode =
-          previous.scheduleMode === "specific" ? "specific" : "weekly";
+          previous.scheduleMode === "limitless" ? "limitless" : previous.scheduleMode === "specific" ? "specific" : "weekly";
         const nextDateRules =
           config.scheduleMode === "specific"
             ? config.dateRules
@@ -1180,7 +1182,7 @@
           subjectId: previous.subjectId,
           dateRules: nextDateRules,
           allocations: Object.fromEntries(
-            Object.entries(previous.allocations || {}).filter(([date]) =>
+            Object.entries(config.scheduleMode === "limitless" ? {} : previous.allocations || {}).filter(([date]) =>
               inRange(date),
             ),
           ),
@@ -1247,12 +1249,13 @@
     const activeGoals = state.goals
       .filter((goal) => dateInGoal(goal, dateKey))
       .sort((a, b) => a.title.localeCompare(b.title, "it"));
+    const scheduledGoals = activeGoals.filter((goal) => goal.scheduleMode !== "limitless");
     const allRest =
-      activeGoals.length > 0 &&
-      activeGoals.every((goal) => !isStudyDay(goal, dateKey));
+      scheduledGoals.length > 0 &&
+      scheduledGoals.every((goal) => !isStudyDay(goal, dateKey));
     $("#day-rest").checked = allRest;
     $("#day-rest").dataset.originalRest = String(allRest);
-    $("#day-rest").disabled = activeGoals.length === 0;
+    $("#day-rest").disabled = scheduledGoals.length === 0;
     $("#day-redistribute").checked = state.settings.autoRedistribute !== false;
 
     if (!activeGoals.length) {
@@ -1266,10 +1269,10 @@
           const planned = getPlanned(goal, dateKey);
           const done = getDone(goal, dateKey);
           const manual = goal.allocations[dateKey]?.source === "manual";
-          return `<div class="day-task-row ${allRest ? "is-disabled" : ""}" data-day-goal="${escapeHtml(goal.id)}" data-original-planned="${planned}" data-original-done="${done}" style="--task-color:${safeColor(goal.color)}">
-          <div class="day-task-name"><strong>${escapeHtml(goal.title)}</strong><span>${futureDate ? "Il progresso si registra il giorno stesso" : manual ? "Carico personalizzato" : "Distribuzione automatica"}</span></div>
+          return `<div class="day-task-row ${allRest && goal.scheduleMode !== "limitless" ? "is-disabled" : ""}" data-day-goal="${escapeHtml(goal.id)}" data-original-planned="${planned}" data-original-done="${done}" style="--task-color:${safeColor(goal.color)}">
+          <div class="day-task-name"><strong>${escapeHtml(goal.title)}</strong><span>${futureDate ? "Il progresso si registra il giorno stesso" : goal.scheduleMode === "limitless" ? `${Planner.goalStats(goal).remainingPages} pagine rimanenti · al tuo ritmo` : manual ? "Carico personalizzato" : "Distribuzione automatica"}</span></div>
           <div class="day-task-fields">
-            <label>Pianificate · ${escapeHtml(goal.title)}<input class="day-planned" type="number" min="0" max="9999" inputmode="numeric" value="${planned}" ${allRest ? "disabled" : ""} /></label>
+            <label ${goal.scheduleMode === "limitless" ? 'hidden' : ''}>Pianificate · ${escapeHtml(goal.title)}<input class="day-planned" type="number" min="0" max="9999" inputmode="numeric" value="${planned}" ${allRest ? "disabled" : ""} /></label>
             <label>Completate · ${escapeHtml(goal.title)}<input class="day-done" type="number" min="0" max="9999" inputmode="numeric" value="${done}" ${futureDate ? "disabled" : ""} /></label>
           </div>
         </div>`;
@@ -1307,10 +1310,10 @@
           throw new RangeError("Non è possibile registrare progressi futuri");
         }
 
-        if (restChanged) {
+        if (restChanged && goal.scheduleMode !== "limitless") {
           goal = Planner.setDateRule(goal, dateKey, rest ? "off" : "study");
         }
-        if (!rest && planned !== originalPlanned) {
+        if (goal.scheduleMode !== "limitless" && !rest && planned !== originalPlanned) {
           goal = Planner.setPlanned(goal, dateKey, planned, { redistribute });
         }
         if (done !== originalDone) {
@@ -1362,7 +1365,7 @@
       });
       const delta = done - planned;
       const note =
-        state.settings.autoRedistribute && delta !== 0
+        goal.scheduleMode !== "limitless" && state.settings.autoRedistribute && delta !== 0
           ? " Le pagine rimanenti sono state ridistribuite."
           : "";
       showToast(
@@ -1694,7 +1697,7 @@
 
     $("#day-rest").addEventListener("change", (event) => {
       $$(".day-task-row", elements.dayForm).forEach((row) =>
-        row.classList.toggle("is-disabled", event.target.checked),
+        row.classList.toggle("is-disabled", event.target.checked && !$(".day-planned", row).closest("label").hidden),
       );
       $$(".day-planned", elements.dayForm).forEach((input) => {
         input.disabled = event.target.checked;
